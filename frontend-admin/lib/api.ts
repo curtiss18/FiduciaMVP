@@ -18,25 +18,28 @@ api.interceptors.response.use(
   }
 );
 
-// Content Management API
+// Content Management API (CRUD)
 export const contentApi = {
   // Get all content pieces
-  getContent: () => api.get('/knowledge-base/database/summary'),
+  getContent: (params?: any) => api.get('/content', { params }),
+  
+  // Get content enums for form dropdowns
+  getContentEnums: () => api.get('/content/enums'),
+  
+  // Get content statistics
+  getContentStatistics: () => api.get('/content/statistics'),
   
   // Get specific content by ID
-  getContentById: (id: string) => api.get(`/knowledge-base/content/${id}`),
+  getContentById: (id: number) => api.get(`/content/${id}`),
   
-  // Add new content
-  addContent: (content: any) => api.post('/knowledge-base/content', content),
+  // Create new content
+  createContent: (content: any) => api.post('/content', content),
   
   // Update existing content
-  updateContent: (id: string, content: any) => api.put(`/knowledge-base/content/${id}`, content),
+  updateContent: (id: number, content: any) => api.put(`/content/${id}`, content),
   
   // Delete content
-  deleteContent: (id: string) => api.delete(`/knowledge-base/content/${id}`),
-  
-  // Search content
-  searchContent: (query: string) => api.get(`/knowledge-base/database/search?q=${query}`),
+  deleteContent: (id: number) => api.delete(`/content/${id}`),
 };
 
 // Vector Search API

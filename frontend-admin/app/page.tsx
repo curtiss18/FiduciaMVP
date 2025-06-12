@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -46,6 +47,7 @@ export default function AdminDashboard() {
   const [embeddingStatus, setEmbeddingStatus] = useState<EmbeddingStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const router = useRouter()
 
   const fetchSystemData = async () => {
     try {
@@ -104,6 +106,10 @@ export default function AdminDashboard() {
 
   const handleRefresh = () => {
     fetchSystemData()
+  }
+
+  const handleNavigateToContentManagement = () => {
+    router.push('/content-management')
   }
 
   const isSystemHealthy = systemHealth?.healthy ?? false
@@ -335,7 +341,11 @@ export default function AdminDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full justify-start" variant="outline">
+              <Button 
+                className="w-full justify-start" 
+                variant="outline"
+                onClick={handleNavigateToContentManagement}
+              >
                 <FileText className="w-4 h-4 mr-2" />
                 Manage Content Database
               </Button>
