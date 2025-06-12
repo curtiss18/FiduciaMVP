@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Plus } from 'lucide-react'
 import { contentApi } from '@/lib/api'
 
 interface AddContentModalProps {
@@ -11,18 +11,88 @@ interface AddContentModalProps {
   onSuccess: () => void
 }
 
+interface EnumData {
+  content_types: string[]
+  audience_types: string[]
+  approval_statuses: string[]
+  source_types: string[]
+}
+
 export default function AddContentModal({ isOpen, onClose, onSuccess }: AddContentModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoadingEnums, setIsLoadingEnums] = useState(false)
+  const [enums, setEnums] = useState<EnumData | null>(null)
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error' | 'info'
+    message: string
+  } | null>(null)
+  const [showCustomEnum, setShowCustomEnum] = useState({
+    content_type: false,
+    audience_type: false
+  })
+  const [customEnumValues, setCustomEnumValues] = useState({
+    content_type: '',
+    audience_type: ''
+  })
+  
   const [formData, setFormData] = useState({
     title: '',
     content_text: '',
     content_type: 'email_template',
     audience_type: 'general_education',
-    approval_status: 'pending',
+    approval_status: 'approved',
+    source_type: 'fiducia_created',
+    tone: '',
+    topic_focus: '',
+    target_demographics: '',
     tags: '',
-    source: 'user_created',
-    compliance_notes: ''
+    original_source: '',
+    compliance_score: '1.0'
   })
+
+  // Load enums when modal opens
+  useEffect(() => {
+    if (isOpen && !enums) {
+      loadEnums()
+    }
+  }, [isOpen])
+
+  // Auto-hide notifications
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null)
+      }, 4000) // Hide after 4 seconds
+      return () => clearTimeout(timer)
+    }
+  }, [notification])
+
+  const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
+    setNotification({ type, message })
+  }
+
+  const loadEnums = async () => {
+    try {
+      setIsLoadingEnums(true)
+      const response = await contentApi.getContentEnums()
+      if (response.data.status === 'success') {
+        setEnums(response.data.enums)
+      }
+    } catch (error) {
+      console.error('Error loading enums:', error)
+      showNotification('error', 'Failed to load form options. Please refresh and try again.')
+    } finally {
+      setIsLoadingEnums(false)
+    }
+  }
+
+  // Helper function to format enum values for display
+  const formatEnumLabel = (value: string) => {
+    return value
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -32,16 +102,73 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
     }))
   }
 
+  const handleCustomEnumToggle = (enumType: 'content_type' | 'audience_type') => {
+    setShowCustomEnum(prev => ({
+      ...prev,
+      [enumType]: !prev[enumType]
+    }))
+  }
+
+  const handleCustomEnumChange = (enumType: 'content_type' | 'audience_type', value: string) => {
+    setCustomEnumValues(prev => ({
+      ...prev,
+      [enumType]: value
+    }))
+  }
+
+  const handleCustomEnumSubmit = (enumType: 'content_type' | 'audience_type') => {
+    const customValue = customEnumValues[enumType].trim()
+    if (!customValue) return
+    
+    // Convert to snake_case
+    const snakeCaseValue = customValue.toLowerCase().replace(/\s+/g, '_')
+    
+    // Update form data
+    setFormData(prev => ({
+      ...prev,
+      [enumType]: snakeCaseValue
+    }))
+    
+    // Reset custom input
+    setCustomEnumValues(prev => ({
+      ...prev,
+      [enumType]: ''
+    }))
+    setShowCustomEnum(prev => ({
+      ...prev,
+      [enumType]: false
+    }))
+    
+    showNotification('info', `Custom ${enumType.replace('_', ' ')} "${customValue}" will be submitted. Note: This may require admin approval.`)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.title.trim() || !formData.content_text.trim()) {
-      alert('Please fill in required fields')
+      showNotification('error', 'Please fill in required fields (Title and Content)')
       return
     }
 
     try {
       setIsSubmitting(true)
-      await contentApi.createContent(formData)
+      
+      // Prepare the data with proper field mapping
+      const submitData = {
+        title: formData.title.trim(),
+        content_text: formData.content_text.trim(),
+        content_type: formData.content_type,
+        audience_type: formData.audience_type,
+        approval_status: formData.approval_status,
+        source_type: formData.source_type,
+        tone: formData.tone.trim() || null,
+        topic_focus: formData.topic_focus.trim() || null,
+        target_demographics: formData.target_demographics.trim() || null,
+        tags: formData.tags.trim() || null,
+        original_source: formData.original_source.trim() || null,
+        compliance_score: parseFloat(formData.compliance_score) || 1.0
+      }
+      
+      await contentApi.createContent(submitData)
       
       // Reset form
       setFormData({
@@ -49,18 +176,33 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
         content_text: '',
         content_type: 'email_template',
         audience_type: 'general_education',
-        approval_status: 'pending',
+        approval_status: 'approved',
+        source_type: 'fiducia_created',
+        tone: '',
+        topic_focus: '',
+        target_demographics: '',
         tags: '',
-        source: 'user_created',
-        compliance_notes: ''
+        original_source: '',
+        compliance_score: '1.0'
       })
       
-      alert('Content created successfully!')
-      onSuccess()
-      onClose()
-    } catch (error) {
+      showNotification('success', 'Content created successfully!')
+      
+      // Close modal after a brief delay to show success message
+      setTimeout(() => {
+        onSuccess()
+        onClose()
+      }, 1500)
+      
+    } catch (error: any) {
       console.error('Error creating content:', error)
-      alert('Failed to create content. Please try again.')
+      
+      // Better error handling
+      let errorMessage = 'Failed to create content. Please try again.'
+      if (error.response?.data?.error) {
+        errorMessage = `Error: ${error.response.data.error}`
+      }
+      showNotification('error', errorMessage)
     } finally {
       setIsSubmitting(false)
     }
@@ -72,15 +214,41 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
       content_text: '',
       content_type: 'email_template',
       audience_type: 'general_education',
-      approval_status: 'pending',
+      approval_status: 'approved',
+      source_type: 'fiducia_created',
+      tone: '',
+      topic_focus: '',
+      target_demographics: '',
       tags: '',
-      source: 'user_created',
-      compliance_notes: ''
+      original_source: '',
+      compliance_score: '1.0'
     })
+    setShowCustomEnum({
+      content_type: false,
+      audience_type: false
+    })
+    setCustomEnumValues({
+      content_type: '',
+      audience_type: ''
+    })
+    setNotification(null)
     onClose()
   }
 
   if (!isOpen) return null
+
+  if (isLoadingEnums) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg shadow-xl p-6">
+          <div className="flex items-center space-x-3">
+            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <span className="text-gray-700">Loading form options...</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -97,6 +265,60 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
               </svg>
             </button>
           </div>
+
+          {/* Notification */}
+          {notification && (
+            <div className={`mb-4 p-3 rounded-md ${
+              notification.type === 'success' ? 'bg-green-50 border border-green-200' :
+              notification.type === 'error' ? 'bg-red-50 border border-red-200' :
+              'bg-blue-50 border border-blue-200'
+            }`}>
+              <div className="flex items-center">
+                <div className={`flex-shrink-0 ${
+                  notification.type === 'success' ? 'text-green-400' :
+                  notification.type === 'error' ? 'text-red-400' :
+                  'text-blue-400'
+                }`}>
+                  {notification.type === 'success' ? (
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  ) : notification.type === 'error' ? (
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                <div className="ml-3">
+                  <p className={`text-sm font-medium ${
+                    notification.type === 'success' ? 'text-green-800' :
+                    notification.type === 'error' ? 'text-red-800' :
+                    'text-blue-800'
+                  }`}>
+                    {notification.message}
+                  </p>
+                </div>
+                <div className="ml-auto pl-3">
+                  <button
+                    onClick={() => setNotification(null)}
+                    className={`inline-flex ${
+                      notification.type === 'success' ? 'text-green-400 hover:text-green-600' :
+                      notification.type === 'error' ? 'text-red-400 hover:text-red-600' :
+                      'text-blue-400 hover:text-blue-600'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -134,36 +356,213 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Content Type
                 </label>
-                <select
-                  name="content_type"
-                  value={formData.content_type}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="email_template">Email Template</option>
-                  <option value="linkedin_post">LinkedIn Post</option>
-                  <option value="twitter_post">Twitter Post</option>
-                  <option value="facebook_post">Facebook Post</option>
-                  <option value="website_blog">Website Blog</option>
-                  <option value="newsletter">Newsletter</option>
-                </select>
+                <div className="space-y-2">
+                  <select
+                    name="content_type"
+                    value={formData.content_type}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {enums?.content_types.map(type => (
+                      <option key={type} value={type}>
+                        {formatEnumLabel(type)}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  {!showCustomEnum.content_type && (
+                    <button
+                      type="button"
+                      onClick={() => handleCustomEnumToggle('content_type')}
+                      className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add custom type</span>
+                    </button>
+                  )}
+                  
+                  {showCustomEnum.content_type && (
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={customEnumValues.content_type}
+                        onChange={(e) => handleCustomEnumChange('content_type', e.target.value)}
+                        placeholder="Enter custom content type"
+                        className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCustomEnumSubmit('content_type')}
+                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                      >
+                        Add
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCustomEnumToggle('content_type')}
+                        className="px-3 py-1 text-sm bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Audience Type
                 </label>
+                <div className="space-y-2">
+                  <select
+                    name="audience_type"
+                    value={formData.audience_type}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {enums?.audience_types.map(type => (
+                      <option key={type} value={type}>
+                        {formatEnumLabel(type)}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  {!showCustomEnum.audience_type && (
+                    <button
+                      type="button"
+                      onClick={() => handleCustomEnumToggle('audience_type')}
+                      className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add custom audience</span>
+                    </button>
+                  )}
+                  
+                  {showCustomEnum.audience_type && (
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={customEnumValues.audience_type}
+                        onChange={(e) => handleCustomEnumChange('audience_type', e.target.value)}
+                        placeholder="Enter custom audience type"
+                        className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleCustomEnumSubmit('audience_type')}
+                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                      >
+                        Add
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCustomEnumToggle('audience_type')}
+                        className="px-3 py-1 text-sm bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Approval Status
+                </label>
                 <select
-                  name="audience_type"
-                  value={formData.audience_type}
+                  name="approval_status"
+                  value={formData.approval_status}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="general_education">General Education</option>
-                  <option value="high_net_worth">High Net Worth</option>
-                  <option value="retirement_planning">Retirement Planning</option>
-                  <option value="young_professionals">Young Professionals</option>
+                  {enums?.approval_statuses.map(status => (
+                    <option key={status} value={status}>
+                      {formatEnumLabel(status)}
+                    </option>
+                  ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Source Type
+                </label>
+                <select
+                  name="source_type"
+                  value={formData.source_type}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {enums?.source_types.map(source => (
+                    <option key={source} value={source}>
+                      {formatEnumLabel(source)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Compliance Score
+                </label>
+                <input
+                  type="number"
+                  name="compliance_score"
+                  value={formData.compliance_score}
+                  onChange={handleInputChange}
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0.0 - 1.0"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tone
+                </label>
+                <input
+                  type="text"
+                  name="tone"
+                  value={formData.tone}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., professional, casual, educational"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Topic Focus
+                </label>
+                <input
+                  type="text"
+                  name="topic_focus"
+                  value={formData.topic_focus}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., retirement, investing, tax planning"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Target Demographics
+                </label>
+                <input
+                  type="text"
+                  name="target_demographics"
+                  value={formData.target_demographics}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., millennials, boomers, high net worth"
+                />
               </div>
             </div>
 
@@ -183,15 +582,15 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Compliance Notes
+                Original Source
               </label>
               <textarea
-                name="compliance_notes"
-                value={formData.compliance_notes}
+                name="original_source"
+                value={formData.original_source}
                 onChange={handleInputChange}
-                rows={3}
+                rows={2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Add any compliance notes or requirements"
+                placeholder="URL, file path, or description of the original source"
               />
             </div>
 

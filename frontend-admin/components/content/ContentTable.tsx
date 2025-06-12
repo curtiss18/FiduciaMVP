@@ -11,6 +11,7 @@ import {
   AlertCircle,
   MoreVertical
 } from 'lucide-react'
+import DeleteContentModal from './DeleteContentModal'
 
 interface ContentItem {
   id: number
@@ -34,6 +35,13 @@ interface ContentTableProps {
 
 export default function ContentTable({ content, isLoading }: ContentTableProps) {
   const [openDropdown, setOpenDropdown] = useState<number | null>(null)
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean
+    content: ContentItem | null
+  }>({
+    isOpen: false,
+    content: null
+  })
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -50,6 +58,23 @@ export default function ContentTable({ content, isLoading }: ContentTableProps) 
   const toggleDropdown = (id: number, event: React.MouseEvent) => {
     event.stopPropagation()
     setOpenDropdown(openDropdown === id ? null : id)
+  }
+
+  const handleDeleteClick = (item: ContentItem) => {
+    setDeleteModal({
+      isOpen: true,
+      content: item
+    })
+    setOpenDropdown(null) // Close the dropdown
+  }
+
+  const handleDeleteSuccess = () => {
+    // Temporarily disable auto-refresh for debugging
+    console.log('Delete completed - check if record was actually deleted')
+    // window.location.reload()
+    
+    // Alternative: You could manually refresh the data here
+    // by calling a prop function from the parent component
   }
 
   const getStatusBadgeColor = (status: string) => {
@@ -174,10 +199,7 @@ export default function ContentTable({ content, isLoading }: ContentTableProps) 
                           </button>
                           <button
                             className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                            onClick={() => {
-                              // Handle delete action
-                              setOpenDropdown(null)
-                            }}
+                            onClick={() => handleDeleteClick(item)}
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
                             Delete
@@ -192,6 +214,14 @@ export default function ContentTable({ content, isLoading }: ContentTableProps) 
           ))}
         </tbody>
       </table>
+
+      {/* Delete Content Modal */}
+      <DeleteContentModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, content: null })}
+        onSuccess={handleDeleteSuccess}
+        content={deleteModal.content}
+      />
     </div>
   )
 }

@@ -178,8 +178,11 @@ class ContentManagementService:
                 if field not in content_data or not content_data[field]:
                     return {"status": "error", "error": f"Required field '{field}' is missing"}
             
-            async with get_async_db() as db:
-                # Create new content item
+            async with AsyncSessionLocal() as db:
+                # Create new content item with explicit timestamps
+                from datetime import datetime, timezone
+                now = datetime.now(timezone.utc)
+                
                 new_content = MarketingContent(
                     title=content_data["title"],
                     content_text=content_data["content_text"],
@@ -193,12 +196,14 @@ class ContentManagementService:
                     source_type=SourceType(content_data.get("source_type", "fiducia_created")),
                     original_source=content_data.get("original_source"),
                     contributed_by_user_id=content_data.get("contributed_by_user_id"),
-                    tags=",".join(content_data.get("tags", [])) if content_data.get("tags") else None
+                    tags=content_data.get("tags") if content_data.get("tags") else None,
+                    created_at=now,
+                    updated_at=now
                 )
                 
                 db.add(new_content)
-                db.commit()
-                db.refresh(new_content)
+                await db.commit()
+                await db.refresh(new_content)
                 
                 # Auto-generate embedding
                 vectorization_result = await self._generate_embedding_for_content(new_content)
@@ -209,7 +214,7 @@ class ContentManagementService:
                         "id": new_content.id,
                         "title": new_content.title,
                         "content_type": new_content.content_type.value,
-                        "created_at": new_content.created_at.isoformat()
+                        "created_at": new_content.created_at.isoformat() if new_content.created_at else None
                     },
                     "vectorization": vectorization_result
                 }
@@ -317,7 +322,10 @@ class ContentManagementService:
         """
         try:
             async with AsyncSessionLocal() as db:
-                content_item = db.query(MarketingContent).filter(MarketingContent.id == content_id).first()
+                # Use async query operations
+                from sqlalchemy import select
+                result = await db.execute(select(MarketingContent).where(MarketingContent.id == content_id))
+                content_item = result.scalar_one_or_none()
                 
                 if not content_item:
                     return {"status": "error", "error": "Content not found"}
@@ -331,8 +339,8 @@ class ContentManagementService:
                 }
                 
                 # Delete the content (this also deletes the embedding)
-                db.delete(content_item)
-                db.commit()
+                await db.delete(content_item)
+                await db.commit()
                 
                 return {
                     "status": "success",

@@ -83,7 +83,7 @@ class MarketingContent(Base):
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Vector embedding for semantic search (future)
     embedding = Column(Vector(1536), nullable=True)
@@ -110,7 +110,7 @@ class ComplianceRules(Base):
     effective_date = Column(DateTime(timezone=True), nullable=True)
     source_url = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Vector embedding for semantic search
     embedding = Column(Vector(1536), nullable=True)
@@ -154,7 +154,7 @@ class UserContentQueue(Base):
     
     # Timestamps
     submitted_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
 class WarrenInteractions(Base):
@@ -190,7 +190,7 @@ class WarrenInteractions(Base):
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
 class ContentTags(Base):
@@ -214,7 +214,7 @@ class Conversation(Base):
     session_id = Column(String, nullable=False, index=True)
     user_id = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
 class ConversationMessage(Base):
