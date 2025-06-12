@@ -6,12 +6,15 @@ Hi Claude! I'm Curtis, continuing development on **FiduciaMVP** - an AI-powered 
 
 ## 📋 **Essential Reading First**
 
-**BEFORE we start any development session, please review:**
+**BEFORE we start any development session, it is MANDATORY to review:**
 
 1. **[`docs/CURRENT_STATE.md`](CURRENT_STATE.md)** - Latest achievements and current status
 2. **[`../README.md`](../README.md)** - Full project overview and architecture
-3. **[`admin-portal-reference.md`](admin-portal-reference.md)** - Admin portal capabilities
-4. **[`vector-search.md`](vector-search.md)** - Technical implementation details
+3. **[`docs/development-guide.md`](development-guide.md)** - Code quality standards and component architecture
+4. **[`admin-portal-reference.md`](admin-portal-reference.md)** - Admin portal capabilities
+5. **[`vector-search.md`](vector-search.md)** - Technical implementation details
+
+**DO NOT PROCEED WITHOUT REVIEWING THESE FILES**
 
 ## 🎯 **What FiduciaMVP Is**
 
@@ -168,6 +171,7 @@ When we agree on a direction, create a plan covering:
 - **Frontend**: Professional UI with real-time integration
 - **Error Handling**: Graceful degradation and user feedback
 - **Performance**: Sub-second response times, cost monitoring
+- **Component Architecture**: Mandatory decomposition practices (see development-guide.md)
 
 ## 🎯 **Development Status**
 

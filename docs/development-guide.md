@@ -95,6 +95,195 @@ FiduciaMVP/
 4. **Content Vectorization Service** - Batch and real-time processing
 5. **Claude Service** - Content generation backend
 
+## 🏗️ **Component Architecture Guidelines**
+
+### **📦 MANDATORY: Component Decomposition Practice**
+
+**For ANY frontend development session, ALWAYS follow these component architecture principles:**
+
+#### **🎯 Component Size Rule**
+- **Maximum 200 lines** per component file
+- **If a file exceeds 200 lines**, decompose it into smaller components
+- **Prefer 100-150 lines** for optimal maintainability
+
+#### **🏗️ Component Organization Structure**
+```
+components/[feature]/
+├── index.ts                    # Clean exports
+├── types.ts                    # Shared interfaces
+├── [Feature]Main.tsx          # Main orchestrating component
+├── [Feature]Table.tsx         # Data display components
+├── [Feature]Modal.tsx         # Modal/dialog components
+├── [Feature]Form.tsx          # Form components
+├── [Feature]Stats.tsx         # Statistics/dashboard components
+└── [Feature]Controls.tsx      # Interactive controls
+```
+
+#### **🎨 Single Responsibility Principle**
+Each component should have ONE clear purpose:
+- **Data Display**: Tables, lists, cards
+- **User Input**: Forms, modals, search bars
+- **Navigation**: Menus, pagination, filters
+- **Feedback**: Loading states, error messages, success notifications
+- **Layout**: Headers, containers, wrappers
+
+#### **🔄 Component Composition Pattern**
+```typescript
+// ❌ WRONG: Everything in one file
+export default function MassiveComponent() {
+  // 500+ lines of mixed concerns
+}
+
+// ✅ CORRECT: Composed from focused components
+export default function FeatureMain() {
+  return (
+    <div>
+      <FeatureHeader />
+      <FeatureStats />
+      <FeatureSearch />
+      <FeatureTable />
+      <FeaturePagination />
+      <FeatureModals />
+    </div>
+  )
+}
+```
+
+### **📋 Refactoring Triggers**
+
+**IMMEDIATELY decompose when ANY of these occur:**
+
+1. **File Length**: >200 lines
+2. **Multiple Concerns**: Component handles >1 primary responsibility
+3. **Repeated Code**: Similar patterns across different parts
+4. **Testing Difficulty**: Hard to write focused unit tests
+5. **Code Reviews**: Difficulty understanding component purpose
+6. **State Complexity**: >5 useState hooks in one component
+
+### **🛠️ Decomposition Process**
+
+#### **Step 1: Identify Concerns**
+- List all responsibilities in the current component
+- Group related functionality together
+- Identify shared state vs. local state
+
+#### **Step 2: Extract Components**
+```typescript
+// Extract reusable UI components first
+const DataTable = ({ data, onAction }) => { /* ... */ }
+const SearchBar = ({ onSearch, filters }) => { /* ... */ }
+const ActionModal = ({ isOpen, onClose }) => { /* ... */ }
+
+// Then extract feature-specific components
+const UserManagement = () => {
+  return (
+    <>
+      <SearchBar onSearch={handleSearch} />
+      <DataTable data={users} onAction={handleAction} />
+      <ActionModal isOpen={showModal} onClose={closeModal} />
+    </>
+  )
+}
+```
+
+#### **Step 3: Create Shared Types**
+```typescript
+// types.ts
+export interface User {
+  id: number
+  name: string
+  // ... other fields
+}
+
+export interface UserTableProps {
+  users: User[]
+  onEdit: (user: User) => void
+  onDelete: (id: number) => void
+}
+```
+
+#### **Step 4: Clean Exports**
+```typescript
+// index.ts - Make imports clean
+export { default as UserTable } from './UserTable'
+export { default as UserModal } from './UserModal'
+export { default as UserStats } from './UserStats'
+export * from './types'
+```
+
+### **🎯 Proven Benefits**
+
+#### **✅ Maintainability**
+- **Easier debugging**: Issues isolated to specific components
+- **Simpler testing**: Each component tests one concern
+- **Better git history**: Changes don't affect unrelated code
+- **Code reviews**: Smaller, focused diffs
+
+#### **✅ Reusability**
+- **Cross-feature use**: Components work in multiple contexts
+- **Consistent UI**: Shared components ensure design consistency
+- **Development speed**: Don't rebuild common patterns
+- **Documentation**: Each component is self-documenting
+
+#### **✅ Team Collaboration**
+- **Parallel development**: Multiple developers work on different components
+- **Skill specialization**: Team members can focus on their strengths
+- **Knowledge sharing**: Components serve as living documentation
+- **Onboarding**: New developers understand focused components faster
+
+### **🚨 Component Architecture Requirements**
+
+#### **For EVERY development session:**
+
+1. **Before writing ANY component >100 lines**:
+   - Plan the component decomposition
+   - Identify the sub-components needed
+   - Create the folder structure
+
+2. **During development**:
+   - Keep components focused on single responsibilities
+   - Extract shared interfaces to types.ts
+   - Create clean export files
+
+3. **After implementation**:
+   - Review component sizes (max 200 lines)
+   - Check for repeated patterns that could be extracted
+   - Ensure each component has clear, single responsibility
+
+4. **Component Review Checklist**:
+   - [ ] Single, clear responsibility
+   - [ ] <200 lines of code
+   - [ ] Reusable with clear props interface
+   - [ ] No repeated code across components
+   - [ ] Clean imports/exports
+   - [ ] TypeScript interfaces defined
+
+### **📁 Example: Content Management Architecture**
+
+**Perfect example of component decomposition:**
+```
+components/content/
+├── index.ts                   # Clean exports (10 lines)
+├── types.ts                   # Shared interfaces (25 lines)
+├── AddContentModal.tsx        # Create form (227 lines - WILL DECOMPOSE FURTHER)
+├── ContentTable.tsx           # Data display (197 lines - GOOD SIZE)
+├── ContentStatsCards.tsx      # Statistics (91 lines - PERFECT)
+├── SearchFilterBar.tsx        # Search UI (47 lines - PERFECT)
+└── Pagination.tsx             # Navigation (106 lines - PERFECT)
+```
+
+**Main page reduced from 570+ lines to 222 lines** ✅
+
+### **🔄 Continuous Improvement**
+
+**Every session should improve component architecture:**
+- Look for decomposition opportunities
+- Extract reusable patterns
+- Simplify complex components
+- Improve type safety and interfaces
+
+**This is NOT optional - it's a core development requirement for maintainable, scalable code.**
+
 ## 🔧 **Development Tasks**
 
 ### **Adding New Content Types**
