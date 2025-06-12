@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+from typing import Optional
 from src.services.claude_service import claude_service
 from src.services.knowledge_base_service import get_knowledge_service
 from src.services.async_knowledge_service import async_kb_service
@@ -8,6 +9,8 @@ from src.services.enhanced_warren_service import enhanced_warren_service
 from src.services.embedding_service import embedding_service
 from src.services.vector_search_service import vector_search_service
 from src.services.content_vectorization_service import content_vectorization_service
+from src.services.content_management_service import content_management_service
+from src.models.refactored_database import ContentType, AudienceType, ApprovalStatus, SourceType
 from src.core.database import check_db_connection, create_tables, get_db
 
 router = APIRouter()
@@ -439,5 +442,165 @@ async def get_vector_search_stats():
     try:
         stats = await vector_search_service.get_vector_search_stats()
         return {"status": "success", "vector_search_stats": stats}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+# ===== CONTENT MANAGEMENT CRUD ENDPOINTS =====
+
+@router.get("/content")
+async def list_content(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(50, ge=1, le=500, description="Maximum number of records to return"),
+    content_type: Optional[str] = Query(None, description="Filter by content type"),
+    audience_type: Optional[str] = Query(None, description="Filter by audience type"),
+    approval_status: Optional[str] = Query(None, description="Filter by approval status"),
+    source_type: Optional[str] = Query(None, description="Filter by source type"),
+    search: Optional[str] = Query(None, description="Search in title, content, and tags")
+):
+    """
+    Get all marketing content with optional filtering and pagination.
+    
+    Supports filtering by:
+    - content_type: website_blog, newsletter, linkedin_post, etc.
+    - audience_type: client_communication, prospect_advertising, etc.
+    - approval_status: pending, approved, rejected, needs_revision
+    - source_type: fiducia_created, user_contributed, etc.
+    - search: Text search in title, content, and tags
+    """
+    try:
+        # Convert string enums to enum objects
+        content_type_enum = None
+        if content_type:
+            try:
+                content_type_enum = ContentType(content_type.lower())
+            except ValueError:
+                return {"status": "error", "error": f"Invalid content_type: {content_type}"}
+        
+        audience_type_enum = None
+        if audience_type:
+            try:
+                audience_type_enum = AudienceType(audience_type.lower())
+            except ValueError:
+                return {"status": "error", "error": f"Invalid audience_type: {audience_type}"}
+        
+        approval_status_enum = None
+        if approval_status:
+            try:
+                approval_status_enum = ApprovalStatus(approval_status.lower())
+            except ValueError:
+                return {"status": "error", "error": f"Invalid approval_status: {approval_status}"}
+        
+        source_type_enum = None
+        if source_type:
+            try:
+                source_type_enum = SourceType(source_type.lower())
+            except ValueError:
+                return {"status": "error", "error": f"Invalid source_type: {source_type}"}
+        
+        # Get content from service
+        result = await content_management_service.get_all_content(
+            skip=skip,
+            limit=limit,
+            content_type=content_type_enum,
+            audience_type=audience_type_enum,
+            approval_status=approval_status_enum,
+            search_query=search,
+            source_type=source_type_enum
+        )
+        
+        return result
+        
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@router.get("/content/enums")
+async def get_content_enums():
+    """Get available enum values for content creation/filtering."""
+    try:
+        return {
+            "status": "success",
+            "enums": {
+                "content_types": [e.value for e in ContentType],
+                "audience_types": [e.value for e in AudienceType],
+                "approval_statuses": [e.value for e in ApprovalStatus],
+                "source_types": [e.value for e in SourceType]
+            }
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@router.get("/content/statistics")
+async def get_content_statistics():
+    """Get statistics about the content database."""
+    try:
+        result = await content_management_service.get_content_statistics()
+        return result
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@router.post("/content")
+async def create_content(request: dict):
+    """
+    Create new marketing content with automatic vectorization.
+    
+    Required fields:
+    - title: Content title
+    - content_text: The actual content
+    - content_type: Type from ContentType enum
+    - audience_type: Type from AudienceType enum
+    
+    Optional fields:
+    - tone: professional, casual, educational, promotional
+    - topic_focus: retirement, investing, tax, estate
+    - target_demographics: millennials, boomers, high_net_worth
+    - approval_status: pending, approved, rejected, needs_revision (default: approved)
+    - compliance_score: 0-1 scale (default: 1.0)
+    - source_type: fiducia_created, user_contributed, etc. (default: fiducia_created)
+    - original_source: URL, file path, or description
+    - contributed_by_user_id: If user-contributed
+    - tags: Array of tags
+    """
+    try:
+        result = await content_management_service.create_content(request)
+        return result
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@router.get("/content/{content_id}")
+async def get_content_by_id(content_id: int):
+    """Get a specific marketing content item by ID."""
+    try:
+        result = await content_management_service.get_content_by_id(content_id)
+        return result
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@router.put("/content/{content_id}")
+async def update_content(content_id: int, request: dict):
+    """
+    Update existing marketing content with automatic re-vectorization.
+    
+    Any field can be updated. If title or content_text changes,
+    the embedding will be automatically regenerated.
+    """
+    try:
+        result = await content_management_service.update_content(content_id, request)
+        return result
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@router.delete("/content/{content_id}")
+async def delete_content(content_id: int):
+    """Delete marketing content and its embedding."""
+    try:
+        result = await content_management_service.delete_content(content_id)
+        return result
     except Exception as e:
         return {"status": "error", "error": str(e)}

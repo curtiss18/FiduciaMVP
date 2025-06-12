@@ -2,258 +2,170 @@
 
 > **AI-Powered Financial Compliance Content Generation Platform**
 
-An enterprise-grade SaaS platform that generates SEC/FINRA-compliant marketing content for financial advisors using advanced semantic search and AI technology.
+An enterprise-grade SaaS platform that generates SEC/FINRA-compliant marketing content for financial advisors using advanced semantic search, AI technology, and comprehensive content management.
 
 ## 🎯 **What is FiduciaMVP?**
 
-FiduciaMVP is a sophisticated AI-powered platform designed specifically for financial services professionals who need to create compliant marketing content quickly and safely. Built for **Investment Advisor Representatives (IARs)**, **Registered Investment Advisors (RIAs)**, and **financial services firms**.
+FiduciaMVP solves a critical problem in financial services: creating compliant marketing content is expensive and time-consuming. Financial advisors typically pay $8K-$15K/month for compliance experts, while our platform provides automated compliance at $99-$599/month - saving customers $120K-$250K annually.
 
-### **Core Value Proposition**
-- **$120K - $250K annual savings** vs. self-managed compliance solutions
-- **Sub-second semantic search** with 29+ vectorized compliance content pieces  
-- **Professional admin portal** with real-time system monitoring
-- **Warren AI Assistant** with hybrid vector search + automatic fallbacks
-- **Never-fail architecture** ensuring 100% content generation reliability
+**Built for**: Investment Advisor Representatives (IARs), Registered Investment Advisors (RIAs), and financial services firms requiring SEC/FINRA-compliant marketing content.
 
-## 🚀 **Key Features**
+## 🚀 **Core Features**
 
-### **✅ Production-Ready Components**
-- **Advanced Vector Search**: OpenAI embeddings + PostgreSQL pgvector
-- **Warren V3 AI Assistant**: Claude AI with intelligent context retrieval
-- **Professional Admin Portal**: Real-time monitoring with Next.js 14
-- **Enterprise Architecture**: Docker, FastAPI, TypeScript stack
-- **Cost Efficient**: <$0.001/month operational costs with live tracking
+### **Warren AI Assistant**
+- **Intelligent Content Generation**: Creates compliant marketing content for LinkedIn, email, websites
+- **Hybrid Search Strategy**: Vector search + text fallback + emergency backup ensures 100% reliability
+- **Compliance-First**: Built-in SEC/FINRA expertise with automatic disclaimers
 
-### **🎛️ Admin Portal Capabilities**
-- **Real-time System Health**: Live monitoring of all services
-- **Vector Search Analytics**: Performance metrics and content statistics  
-- **Cost Transparency**: Live OpenAI API usage tracking
-- **Professional UI**: Enterprise-grade interface for demos/investors
-- **Auto-refresh**: System data updates every 30 seconds
+### **Advanced Content Management**
+- **Complete CRUD API**: Create, read, update, delete content with automatic vectorization
+- **Dynamic Knowledge Base**: 29+ compliance content pieces with real-time management
+- **Smart Search**: Semantic similarity search using OpenAI embeddings
+- **Rich Metadata**: Content type, audience, approval status, source tracking
 
-### **🤖 Warren AI Features**
-- **Semantic Content Discovery**: Vector search finds relevant compliance content
-- **Automatic Fallbacks**: Text search if vector insufficient, original Warren as final backup
-- **Context Quality Scoring**: Smart assessment of retrieved information
-- **Professional Output**: Always includes proper disclaimers and compliance language
+### **Professional Admin Portal**
+- **Real-time Monitoring**: Live system health and performance metrics
+- **Cost Transparency**: OpenAI API usage tracking (<$0.001/month operational costs)
+- **Enterprise UI**: Next.js 14 + TypeScript + Tailwind CSS professional interface
 
 ## 🏗️ **Technical Architecture**
 
-### **Backend Stack**
-- **FastAPI**: Modern Python web framework with async support
-- **PostgreSQL + pgvector**: Production vector database with 1536-dimensional embeddings
+### **Backend**
+- **FastAPI**: 20+ async endpoints including full CRUD operations
+- **PostgreSQL + pgvector**: Vector database with 1536-dimensional embeddings
 - **Redis**: Caching and session management
-- **Docker**: Containerized development and deployment
+- **Docker**: Containerized infrastructure
 
-### **Frontend Stack**  
-- **Next.js 14**: App Router with TypeScript and Server Components
-- **Tailwind CSS + Shadcn/ui**: Professional component library
+### **Frontend**  
+- **Next.js 14**: Modern React framework with App Router
+- **Professional UI**: Tailwind CSS + Shadcn/ui component library
 - **Real-time Integration**: Live API monitoring with auto-refresh
 
 ### **AI & Search**
-- **OpenAI GPT-4o**: Content generation with compliance expertise
-- **OpenAI text-embedding-3-large**: Advanced semantic embeddings
 - **Claude AI**: Primary content generation with compliance focus
-- **Hybrid Search Strategy**: Vector + text + fallback architecture
-
-## 📊 **Current System Status**
-
-### **Content Database**
-- **29 Marketing Content Pieces**: 100% vectorized and searchable
-- **Multiple Content Types**: LinkedIn posts, email templates, compliance rules
-- **Similarity Matching**: 0.32-0.38 scores for relevant queries like "retirement planning"
-
-### **Performance Metrics**  
-- **Search Latency**: <500ms semantic search response time
-- **Implementation Cost**: $0.0004 total vectorization cost  
-- **System Uptime**: 100% with comprehensive monitoring
-- **Admin Portal**: Professional interface with live data integration
+- **OpenAI**: GPT-4o + text-embedding-3-large for semantic search
+- **Vector Search**: Sub-second similarity matching with pgvector
 
 ## 🎯 **Business Impact**
 
-### **Target Market**
-- **SEC-Registered Investment Advisors**: ~15,000 potential customers
-- **FINRA Representatives**: ~625,000 potential customers  
-- **Insurance Agents** (financial products): ~400,000 potential customers
-- **Total Addressable Market**: $421.4M ARR potential
+### **Market Opportunity**
+- **117,500+ potential customers** across SEC advisors, FINRA reps, insurance agents
+- **$421M Total Addressable Market** with strong unit economics
+- **$120K-$250K annual savings** per customer vs. traditional solutions
 
 ### **Competitive Advantages**
-- **Professional Admin Portal**: Most competitors lack real-time monitoring
-- **Advanced Vector Search**: Semantic search vs. keyword-only systems
+- **Complete Content Management**: Dynamic knowledge base vs. static competitors
+- **Professional Admin Portal**: Real-time monitoring vs. basic dashboards  
+- **Advanced Vector Search**: Semantic similarity vs. keyword-only systems
 - **Enterprise Presentation**: Ready for investor/customer demos
-- **Cost Efficiency**: Transparent, real-time cost monitoring
 
 ## 🚀 **Quick Start**
 
 ### **Prerequisites**
-- Python 3.11+
-- Node.js 18+
-- Docker & Docker Compose
-- OpenAI API key
+- Python 3.11+, Node.js 18+, Docker & Docker Compose
+- OpenAI API key (for embeddings and content generation)
 
-### **Setup Instructions**
+### **Setup**
+```bash
+# 1. Clone and setup
+git clone https://github.com/curtiss18/FiduciaMVP.git
+cd FiduciaMVP
+python -m venv venv && venv\Scripts\activate
+pip install -r requirements.txt
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/curtiss18/FiduciaMVP.git
-   cd FiduciaMVP
-   ```
+# 2. Configuration
+cp .env.example .env
+# Add your OPENAI_API_KEY to .env
 
-2. **Environment Setup**
-   ```bash
-   # Create virtual environment
-   python -m venv venv
-   venv\Scripts\activate  # Windows
-   
-   # Install dependencies
-   pip install -r requirements.txt
-   ```
+# 3. Start services
+docker-compose up -d
+uvicorn src.main:app --reload
 
-3. **Configuration**
-   ```bash
-   # Copy environment template
-   cp .env.example .env
-   
-   # Add your OpenAI API key to .env
-   OPENAI_API_KEY=your_openai_api_key_here
-   ```
+# 4. Start admin portal (new terminal)
+cd frontend-admin && npm install && npm run dev
+```
 
-4. **Start Infrastructure**
-   ```bash
-   # Start PostgreSQL + Redis
-   docker-compose up -d
-   ```
+### **Access Points**
+- **Admin Portal**: http://localhost:3001 (real-time monitoring)
+- **API Backend**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs (see all CRUD endpoints)
 
-5. **Launch Application**
-   ```bash
-   # Terminal 1: Start FastAPI backend
-   uvicorn src.main:app --reload
-   
-   # Terminal 2: Start Admin Portal  
-   cd frontend-admin
-   npm install
-   npm run dev
-   ```
+## 📊 **API Overview**
 
-6. **Access Points**
-   - **Admin Portal**: http://localhost:3001
-   - **API Backend**: http://localhost:8000  
-   - **API Documentation**: http://localhost:8000/docs
+### **Content Management (CRUD)**
+```
+GET    /api/v1/content              # List with filtering/pagination
+POST   /api/v1/content              # Create + auto-vectorize
+GET    /api/v1/content/{id}         # Get specific item
+PUT    /api/v1/content/{id}         # Update + re-vectorize
+DELETE /api/v1/content/{id}         # Delete + remove embeddings
+GET    /api/v1/content/statistics   # Database metrics
+```
+
+### **AI Content Generation**
+```
+POST   /api/v1/warren/generate-v3   # Warren AI with vector search
+GET    /api/v1/vector-search/stats  # Search performance metrics
+```
 
 ## 📁 **Project Structure**
 
 ```
 FiduciaMVP/
-├── src/                           # FastAPI Backend
-│   ├── api/endpoints.py          # 15+ API endpoints
-│   ├── services/                 # Warren V3, Vector Search, Embeddings
-│   └── models/                   # Database models with vector support
-├── frontend-admin/               # Admin Portal (Next.js 14)
-│   ├── app/                     # Real-time dashboard
-│   ├── components/ui/           # Shadcn/ui components  
-│   └── lib/api.ts              # Live API integration
-├── docs/                        # Comprehensive Documentation
-│   ├── CURRENT_STATE.md        # Complete system status
-│   ├── admin-portal-reference.md
-│   └── vector-search.md
-├── data/knowledge_base/         # Compliance Content
-│   ├── approved_examples/       # Compliant marketing content
-│   ├── regulations/            # SEC/FINRA rules
-│   └── disclaimers/           # Required disclaimer templates
-└── docker-compose.yml          # Infrastructure setup
+├── src/                          # FastAPI Backend
+│   ├── api/endpoints.py         # 20+ API endpoints
+│   ├── services/                # Warren AI, Vector Search, Content Management
+│   └── models/                  # Database models with vector support
+├── frontend-admin/              # Next.js 14 Admin Portal
+├── docs/                        # Documentation
+│   ├── CURRENT_STATE.md        # Development status
+│   ├── CONVERSATION_STARTER.md # Claude development guide
+│   └── [technical guides]
+├── data/knowledge_base/         # Compliance content
+└── docker-compose.yml          # Infrastructure
 ```
 
-## 🔧 **Development Workflow**
+## 📈 **Current Status**
 
-### **System Verification**
+**Production-Ready Core System** with:
+- ✅ Complete CRUD API for content management
+- ✅ Professional admin portal with real-time monitoring  
+- ✅ Advanced vector search with 29 vectorized content pieces
+- ✅ Warren V3 AI with hybrid search strategy
+- ✅ Enterprise architecture ready for scaling
+
+**Next Development Phase**: Frontend content management interface or advisor portal
+
+> 📋 **For detailed development status and priorities**, see [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md)
+
+## 🔧 **Development**
+
+### **Testing the System**
 ```bash
-# Check all services are running
+# Verify all services
 curl http://localhost:8000/api/v1/health
-curl http://localhost:8000/api/v1/vector-search/readiness
-curl http://localhost:8000/api/v1/embeddings/status
-```
+curl http://localhost:8000/api/v1/content/statistics
 
-### **Testing Warren AI**
-```bash
-# Test content generation via API
-curl -X POST http://localhost:8000/api/v1/warren/generate \
+# Test Warren AI
+curl -X POST http://localhost:8000/api/v1/warren/generate-v3 \
   -H "Content-Type: application/json" \
-  -d '{"message": "Create a LinkedIn post about retirement planning"}'
+  -d '{"request": "LinkedIn post about retirement planning", "content_type": "linkedin_post"}'
 ```
 
-## 📈 **Current Achievements**
+### **For Developers**
+- **Architecture Details**: See technical guides in `/docs` directory
+- **Development Workflow**: See [`docs/CONVERSATION_STARTER.md`](docs/CONVERSATION_STARTER.md)
+- **API Reference**: Available at http://localhost:8000/docs when running
 
-### **✅ Phase 1-5 Complete**
-- ✅ **Vector Search System**: 29 content pieces vectorized with OpenAI embeddings
-- ✅ **Warren V3 AI**: Hybrid search with automatic fallbacks  
-- ✅ **Professional Admin Portal**: Real-time monitoring with Next.js 14
-- ✅ **Live API Integration**: 15+ endpoints with proper CORS
-- ✅ **Enterprise Architecture**: Production-ready Docker infrastructure
+## 📞 **Documentation**
 
-### **🎯 Ready for Next Phase**
-- **Enhanced Admin Features**: Content management CRUD interface
-- **Advisor Portal**: End-user interface for content generation
-- **Advanced Vector Features**: Content recommendation engine
-- **Production Deployment**: Cloud infrastructure and CI/CD
-
-## 💼 **Business Metrics**
-
-### **Unit Economics**
-- **Customer Savings**: $120K-$250K/year vs. self-managed solutions
-- **Operational Costs**: <$0.001/month with shared infrastructure
-- **Target Pricing**: $99-$599/month across customer tiers  
-- **Gross Margin**: 48% average across pricing tiers
-
-### **Market Validation**
-- **Total Addressable Market**: $421.4M ARR potential
-- **Competitive Moat**: Advanced vector search + professional monitoring
-- **Customer Pain Point**: Expensive compliance experts ($8K-$15K/month)
-- **Solution**: Automated compliance with professional oversight
-
-## 🔮 **Roadmap**
-
-### **Immediate (Next 4-6 weeks)**
-- [ ] Enhanced admin content management interface
-- [ ] Interactive vector search testing tools  
-- [ ] Advisor portal with Warren chat interface
-- [ ] Multi-tenant approval workflow
-
-### **Near-term (2-4 months)**
-- [ ] Production cloud deployment (AWS/GCP)
-- [ ] Advanced analytics and business intelligence
-- [ ] Content recommendation engine
-- [ ] API integrations (LinkedIn, email platforms)
-
-### **Long-term (6+ months)**  
-- [ ] Multi-channel content distribution
-- [ ] A/B testing framework for content optimization
-- [ ] Advanced compliance automation
-- [ ] Enterprise customer onboarding
-
-## 🏆 **Recognition**
-
-**FiduciaMVP represents a sophisticated, enterprise-ready platform** that combines:
-- Advanced AI technology with financial services compliance expertise
-- Professional-grade monitoring and administrative capabilities  
-- Cost-effective, scalable architecture ready for thousands of users
-- Real business value with measurable ROI for financial services professionals
+**Key Resources**:
+- **[Current Development Status](docs/CURRENT_STATE.md)** - Latest features and priorities
+- **[Developer Guide](docs/CONVERSATION_STARTER.md)** - How to continue development  
+- **[Admin Portal Guide](docs/admin-portal-reference.md)** - Using the admin interface
+- **[Technical Implementation](docs/vector-search.md)** - Vector search details
 
 ---
 
-**Status**: ✅ **Production-Ready Core System** with professional admin portal  
-**Next Milestone**: Enhanced admin features or advisor portal development  
-**Business Ready**: Professional interface for customer demos and investor presentations
-
-## 📞 **Contact**
-
-For questions about FiduciaMVP architecture, business model, or technical implementation, please review the comprehensive documentation in the `/docs` directory.
-
-**Key Documents**:
-- [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) - Complete system status
-- [`docs/admin-portal-reference.md`](docs/admin-portal-reference.md) - Admin portal guide  
-- [`docs/vector-search.md`](docs/vector-search.md) - Technical implementation
-- [`docs/frontend-requirements.md`](docs/frontend-requirements.md) - Complete frontend specifications
-
----
-
-**Built with ❤️ for the financial services industry** 🏛️
+**Built for the financial services industry** 🏛️  
+*Transforming compliance from a cost center to a competitive advantage*
