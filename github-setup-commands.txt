@@ -1,0 +1,22 @@
+# GitHub Setup Commands for FiduciaMVP
+# Run these commands after creating the repository on GitHub
+
+# 1. Add the remote origin (replace YOUR_USERNAME with your actual GitHub username)
+git remote add origin https://github.com/YOUR_USERNAME/FiduciaMVP.git
+
+# 2. Rename the main branch to 'main' (GitHub default)
+git branch -M main
+
+# 3. Push the code to GitHub
+git push -u origin main
+
+# Alternative: If you want to use SSH instead of HTTPS
+# git remote add origin git@github.com:YOUR_USERNAME/FiduciaMVP.git
+
+# To verify the remote was added correctly:
+git remote -v
+
+# Example with actual username (replace curtiss18 with your username):
+# git remote add origin https://github.com/curtiss18/FiduciaMVP.git
+# git branch -M main  
+# git push -u origin main
