@@ -1,0 +1,18 @@
+# Final Commands to Push FiduciaMVP to GitHub
+# Run these AFTER creating the repository on GitHub.com
+
+# Navigate to project directory
+cd "C:\Users\curti\OneDrive\Desktop\WebDev\FiduciaMVP"
+
+# Add GitHub remote (update username if different from curtiss18)
+git remote add origin https://github.com/curtiss18/FiduciaMVP.git
+
+# Push all commits to GitHub
+git push -u origin main
+
+# Verify push was successful
+git remote -v
+git status
+
+# Your repository will be live at:
+# https://github.com/curtiss18/FiduciaMVP
