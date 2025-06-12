@@ -16,7 +16,10 @@ import {
   Loader2,
   RefreshCw,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  MoreVertical
 } from 'lucide-react'
 import { contentApi } from '@/lib/api'
 
@@ -52,6 +55,9 @@ export default function ContentManagement() {
   const [isLoading, setIsLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
   const [searchTerm, setSearchTerm] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [openDropdown, setOpenDropdown] = useState<number | null>(null)
 
   const fetchContentData = async () => {
     try {
@@ -63,7 +69,7 @@ export default function ContentManagement() {
       
       // Fetch statistics
       const statsResponse = await contentApi.getContentStatistics()
-      setStats(statsResponse.data)
+      setStats(statsResponse.data.statistics || statsResponse.data)
       
       setLastUpdated(new Date())
       
@@ -87,6 +93,43 @@ export default function ContentManagement() {
     item.content_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.tags.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredContent.length / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
+  const paginatedContent = filteredContent.slice(startIndex, endIndex)
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm])
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize)
+    setCurrentPage(1) // Reset to first page when changing page size
+  }
+
+  const toggleDropdown = (id: number, event: React.MouseEvent) => {
+    event.stopPropagation()
+    setOpenDropdown(openDropdown === id ? null : id)
+  }
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setOpenDropdown(null)
+    }
+    
+    if (openDropdown !== null) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [openDropdown])
 
   const getStatusBadgeColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -130,23 +173,9 @@ export default function ContentManagement() {
               ) : (
                 <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                   <CheckCircle className="w-4 h-4 mr-1" />
-                  {content.length} Items
+                  System Healthy
                 </Badge>
               )}
-              
-              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
-                {isLoading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                )}
-                {isLoading ? 'Refreshing...' : 'Refresh'}
-              </Button>
-              
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Content
-              </Button>
             </div>
           </div>
         </div>
@@ -216,9 +245,51 @@ export default function ContentManagement() {
           </Card>
         </div>
 
-        {/* Search and Actions Bar */}
-        <Card className="shadow-lg border-0 mb-6">
-          <CardContent className="p-6">
+        {/* Content Table */}
+        <Card className="shadow-lg border-0">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center">
+                  <Database className="w-6 h-6 mr-2 text-blue-600" />
+                  Content Database
+                </CardTitle>
+                <CardDescription>
+                  Manage your compliance and regulatory content
+                </CardDescription>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                {isLoading ? (
+                  <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    Loading...
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    {content.length} Items
+                  </Badge>
+                )}
+                
+                <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                  )}
+                  {isLoading ? 'Refreshing...' : 'Refresh'}
+                </Button>
+                
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                  Add Content
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          
+          {/* Search and Filter Bar */}
+          <div className="border-b border-gray-200 px-6 py-4">
             <div className="flex items-center justify-between space-x-4">
               <div className="flex-1 max-w-md">
                 <div className="relative">
@@ -243,20 +314,8 @@ export default function ContentManagement() {
                 </span>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Content Table */}
-        <Card className="shadow-lg border-0">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Database className="w-6 h-6 mr-2 text-blue-600" />
-              Content Database
-            </CardTitle>
-            <CardDescription>
-              Manage your compliance and regulatory content
-            </CardDescription>
-          </CardHeader>
+          </div>
+          
           <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -271,7 +330,6 @@ export default function ContentManagement() {
                   {searchTerm ? 'No content matches your search.' : 'Start by adding your first content piece.'}
                 </p>
                 <Button>
-                  <Plus className="w-4 h-4 mr-2" />
                   Add Content
                 </Button>
               </div>
@@ -289,7 +347,7 @@ export default function ContentManagement() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredContent.map((item) => (
+                    {paginatedContent.map((item) => (
                       <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-4 px-4">
                           <div className="font-medium text-gray-900">{item.title}</div>
@@ -318,22 +376,141 @@ export default function ContentManagement() {
                           {new Date(item.updated_at).toLocaleDateString()}
                         </td>
                         <td className="py-4 px-4">
-                          <div className="flex items-center justify-end space-x-2">
-                            <Button variant="outline" size="sm">
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button variant="outline" size="sm">
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                          <div className="flex items-center justify-end">
+                            <div className="relative">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={(e) => toggleDropdown(item.id, e)}
+                                className="p-1"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                              
+                              {openDropdown === item.id && (
+                                <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                                  <div className="py-1">
+                                    <button
+                                      className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                      onClick={() => {
+                                        // Handle view action
+                                        setOpenDropdown(null)
+                                      }}
+                                    >
+                                      <Eye className="w-4 h-4 mr-2" />
+                                      View
+                                    </button>
+                                    <button
+                                      className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                      onClick={() => {
+                                        // Handle edit action
+                                        setOpenDropdown(null)
+                                      }}
+                                    >
+                                      <Edit className="w-4 h-4 mr-2" />
+                                      Edit
+                                    </button>
+                                    <button
+                                      className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                                      onClick={() => {
+                                        // Handle delete action
+                                        setOpenDropdown(null)
+                                      }}
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-2" />
+                                      Delete
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+            
+            {/* Pagination Controls */}
+            {filteredContent.length > 0 && (
+              <div className="border-t border-gray-200 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <span className="text-sm text-gray-700">
+                      Showing {startIndex + 1} to {Math.min(endIndex, filteredContent.length)} of {filteredContent.length} results
+                    </span>
+                    
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-700">Show:</span>
+                      <select
+                        value={pageSize}
+                        onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                        className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value={10}>10</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                      <span className="text-sm text-gray-700">per page</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-1" />
+                      Previous
+                    </Button>
+                    
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(page => {
+                          // Show first page, last page, current page, and pages around current
+                          return (
+                            page === 1 ||
+                            page === totalPages ||
+                            Math.abs(page - currentPage) <= 1
+                          )
+                        })
+                        .map((page, index, array) => {
+                          const prevPage = array[index - 1]
+                          const showEllipsis = prevPage && page - prevPage > 1
+                          
+                          return (
+                            <div key={page} className="flex items-center">
+                              {showEllipsis && (
+                                <span className="px-2 py-1 text-gray-500">...</span>
+                              )}
+                              <Button
+                                variant={currentPage === page ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handlePageChange(page)}
+                                className={currentPage === page ? "bg-blue-600 text-white" : ""}
+                              >
+                                {page}
+                              </Button>
+                            </div>
+                          )
+                        })}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
@@ -346,7 +523,7 @@ export default function ContentManagement() {
             <div>•</div>
             <div>Items Loaded: {content.length}</div>
             <div>•</div>
-            <div>Last Updated: {lastUpdated.toLocaleTimeString()}</div>
+            <div>Status: {isLoading ? 'Loading...' : 'Ready'}</div>
           </div>
         </div>
       </div>
