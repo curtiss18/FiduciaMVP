@@ -11,6 +11,12 @@ export interface ContentItem {
   created_at: string
   updated_at: string
   is_vectorized: boolean
+  // Additional fields for enhanced content management
+  tone?: string
+  topic_focus?: string
+  target_demographics?: string
+  original_source?: string
+  compliance_score?: number
 }
 
 export interface ContentStats {
@@ -22,6 +28,14 @@ export interface ContentStats {
     total: number
     percentage: number
   }
+}
+
+export interface ContentModalProps {
+  mode: 'create' | 'edit'
+  isOpen: boolean
+  onClose: () => void
+  onSuccess: () => void
+  content?: ContentItem | null
 }
 
 export interface EditContentModalProps {

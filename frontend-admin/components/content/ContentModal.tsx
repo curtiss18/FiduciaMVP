@@ -4,11 +4,14 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Loader2, Plus } from 'lucide-react'
 import { contentApi } from '@/lib/api'
+import { ContentItem } from './types'
 
-interface AddContentModalProps {
+interface ContentModalProps {
+  mode: 'create' | 'edit'
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
+  content?: ContentItem | null
 }
 
 interface EnumData {
@@ -18,7 +21,7 @@ interface EnumData {
   source_types: string[]
 }
 
-export default function AddContentModal({ isOpen, onClose, onSuccess }: AddContentModalProps) {
+export default function ContentModal({ mode, isOpen, onClose, onSuccess, content }: ContentModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingEnums, setIsLoadingEnums] = useState(false)
   const [enums, setEnums] = useState<EnumData | null>(null)
@@ -50,19 +53,76 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
     compliance_score: '1.0'
   })
 
-  // Load enums when modal opens
+  // Change tracking (only for edit mode)
+  const [originalData, setOriginalData] = useState({
+    title: '',
+    content_text: '',
+    content_type: 'email_template',
+    audience_type: 'general_education',
+    approval_status: 'approved',
+    source_type: 'fiducia_created',
+    tone: '',
+    topic_focus: '',
+    target_demographics: '',
+    tags: '',
+    original_source: '',
+    compliance_score: '1.0'
+  })
+  const [modifiedFields, setModifiedFields] = useState<Set<string>>(new Set())
+
+  // Initialize form data based on mode
+  useEffect(() => {
+    if (isOpen) {
+      if (mode === 'create') {
+        const emptyData = {
+          title: '',
+          content_text: '',
+          content_type: 'email_template',
+          audience_type: 'general_education',
+          approval_status: 'approved',
+          source_type: 'fiducia_created',
+          tone: '',
+          topic_focus: '',
+          target_demographics: '',
+          tags: '',
+          original_source: '',
+          compliance_score: '1.0'
+        }
+        setFormData(emptyData)
+        setModifiedFields(new Set())
+      } else if (mode === 'edit' && content) {
+        const initialData = {
+          title: content.title || '',
+          content_text: content.content_text || '',
+          content_type: content.content_type || 'email_template',
+          audience_type: content.audience_type || 'general_education',
+          approval_status: content.approval_status || 'approved',
+          source_type: content.source || 'fiducia_created',
+          tone: content.tone || '',
+          topic_focus: content.topic_focus || '',
+          target_demographics: content.target_demographics || '',
+          tags: String(content.tags || ''),
+          original_source: content.original_source || '',
+          compliance_score: String(content.compliance_score || '1.0')
+        }
+        setFormData(initialData)
+        setOriginalData(initialData)
+        setModifiedFields(new Set())
+      }
+    }
+  }, [mode, content, isOpen])
+
   useEffect(() => {
     if (isOpen && !enums) {
       loadEnums()
     }
   }, [isOpen])
 
-  // Auto-hide notifications
   useEffect(() => {
     if (notification) {
       const timer = setTimeout(() => {
         setNotification(null)
-      }, 4000) // Hide after 4 seconds
+      }, 4000)
       return () => clearTimeout(timer)
     }
   }, [notification])
@@ -86,7 +146,6 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
     }
   }
 
-  // Helper function to format enum values for display
   const formatEnumLabel = (value: string) => {
     return value
       .split('_')
@@ -96,10 +155,50 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
+    
     setFormData(prev => ({
       ...prev,
       [name]: value
     }))
+    
+    // Track changes only in edit mode
+    if (mode === 'edit') {
+      const originalValue = String(originalData[name as keyof typeof originalData] || '')
+      const isModified = value !== originalValue
+      setModifiedFields(prev => {
+        const newSet = new Set(prev)
+        if (isModified) {
+          newSet.add(name)
+        } else {
+          newSet.delete(name)
+        }
+        return newSet
+      })
+    }
+  }
+
+  // Helper functions for edit mode styling
+  const getFieldClassName = (fieldName: string, baseClassName: string) => {
+    if (mode === 'edit') {
+      const isModified = modifiedFields.has(fieldName)
+      return `${baseClassName} ${isModified ? 'ring-2 ring-blue-500/50 border-blue-500 dark:ring-blue-400/50 dark:border-blue-400' : ''}`
+    }
+    return baseClassName
+  }
+
+  const renderFieldLabel = (text: string, fieldName: string, required = false) => {
+    const isModified = mode === 'edit' && modifiedFields.has(fieldName)
+    return (
+      <label className="block text-sm font-medium text-foreground mb-1">
+        {text}
+        {required && <span className="text-red-500 dark:text-red-400">*</span>}
+        {isModified && (
+          <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+            Modified
+          </span>
+        )}
+      </label>
+    )
   }
 
   const handleCustomEnumToggle = (enumType: 'content_type' | 'audience_type') => {
@@ -120,16 +219,13 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
     const customValue = customEnumValues[enumType].trim()
     if (!customValue) return
     
-    // Convert to snake_case
     const snakeCaseValue = customValue.toLowerCase().replace(/\s+/g, '_')
     
-    // Update form data
     setFormData(prev => ({
       ...prev,
       [enumType]: snakeCaseValue
     }))
     
-    // Reset custom input
     setCustomEnumValues(prev => ({
       ...prev,
       [enumType]: ''
@@ -149,10 +245,14 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
       return
     }
 
+    if (mode === 'edit' && !content) {
+      showNotification('error', 'Content data is missing for edit operation')
+      return
+    }
+
     try {
       setIsSubmitting(true)
       
-      // Prepare the data with proper field mapping
       const submitData = {
         title: formData.title.trim(),
         content_text: formData.content_text.trim(),
@@ -163,42 +263,44 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
         tone: formData.tone.trim() || null,
         topic_focus: formData.topic_focus.trim() || null,
         target_demographics: formData.target_demographics.trim() || null,
-        tags: formData.tags.trim() || null,
+        tags: (typeof formData.tags === 'string' ? formData.tags : String(formData.tags || '')).trim() || null,
         original_source: formData.original_source.trim() || null,
         compliance_score: parseFloat(formData.compliance_score) || 1.0
       }
       
-      await contentApi.createContent(submitData)
+      if (mode === 'create') {
+        await contentApi.createContent(submitData)
+        
+        setFormData({
+          title: '',
+          content_text: '',
+          content_type: 'email_template',
+          audience_type: 'general_education',
+          approval_status: 'approved',
+          source_type: 'fiducia_created',
+          tone: '',
+          topic_focus: '',
+          target_demographics: '',
+          tags: '',
+          original_source: '',
+          compliance_score: '1.0'
+        })
+        
+        showNotification('success', 'Content created successfully!')
+      } else {
+        await contentApi.updateContent(content!.id, submitData)
+        showNotification('success', 'Content updated successfully!')
+      }
       
-      // Reset form
-      setFormData({
-        title: '',
-        content_text: '',
-        content_type: 'email_template',
-        audience_type: 'general_education',
-        approval_status: 'approved',
-        source_type: 'fiducia_created',
-        tone: '',
-        topic_focus: '',
-        target_demographics: '',
-        tags: '',
-        original_source: '',
-        compliance_score: '1.0'
-      })
-      
-      showNotification('success', 'Content created successfully!')
-      
-      // Close modal after a brief delay to show success message
       setTimeout(() => {
         onSuccess()
         onClose()
       }, 1500)
       
     } catch (error: any) {
-      console.error('Error creating content:', error)
+      console.error(`Error ${mode === 'create' ? 'creating' : 'updating'} content:`, error)
       
-      // Better error handling
-      let errorMessage = 'Failed to create content. Please try again.'
+      let errorMessage = `Failed to ${mode === 'create' ? 'create' : 'update'} content. Please try again.`
       if (error.response?.data?.error) {
         errorMessage = `Error: ${error.response.data.error}`
       }
@@ -209,20 +311,6 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
   }
 
   const handleClose = () => {
-    setFormData({
-      title: '',
-      content_text: '',
-      content_type: 'email_template',
-      audience_type: 'general_education',
-      approval_status: 'approved',
-      source_type: 'fiducia_created',
-      tone: '',
-      topic_focus: '',
-      target_demographics: '',
-      tags: '',
-      original_source: '',
-      compliance_score: '1.0'
-    })
     setShowCustomEnum({
       content_type: false,
       audience_type: false
@@ -232,7 +320,34 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
       audience_type: ''
     })
     setNotification(null)
+    setModifiedFields(new Set())
     onClose()
+  }
+
+  // Show the change summary for edit mode
+  const renderChangeTrackingInfo = () => {
+    if (mode !== 'edit' || modifiedFields.size === 0) return null
+
+    const fieldNames = Array.from(modifiedFields).map(field => 
+      field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+    )
+
+    return (
+      <div className="mb-4 p-3 rounded-md bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+        <div className="flex items-center">
+          <div className="text-blue-500 dark:text-blue-400">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+              {modifiedFields.size} field{modifiedFields.size !== 1 ? 's' : ''} modified: {fieldNames.join(', ')}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (!isOpen) return null
@@ -255,7 +370,9 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
       <div className="bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-border">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-card-foreground">Add New Content</h2>
+            <h2 className="text-xl font-bold text-card-foreground">
+              {mode === 'create' ? 'Add New Content' : 'Edit Content'}
+            </h2>
             <button
               onClick={handleClose}
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -322,48 +439,47 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Change Tracking Info */}
+          {renderChangeTrackingInfo()}
+
+          <form onSubmit={handleSubmit} className="space-y-4">            {/* Title Field */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                Title <span className="text-red-500 dark:text-red-400">*</span>
-              </label>
+              {renderFieldLabel('Title', 'title', true)}
               <input
                 type="text"
                 name="title"
                 value={formData.title}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                className={getFieldClassName('title', 'w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring')}
                 placeholder="Enter content title"
                 required
               />
             </div>
 
+            {/* Content Text Field */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                Content <span className="text-red-500 dark:text-red-400">*</span>
-              </label>
+              {renderFieldLabel('Content', 'content_text', true)}
               <textarea
                 name="content_text"
                 value={formData.content_text}
                 onChange={handleInputChange}
                 rows={6}
-                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                className={getFieldClassName('content_text', 'w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring')}
                 placeholder="Enter content text"
                 required
               />
             </div>
 
+            {/* Content Type and Audience Type */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Content Type
-                </label>
+                {renderFieldLabel('Content Type', 'content_type')}
                 <div className="space-y-2">
                   <select
                     name="content_type"
                     value={formData.content_type}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className={getFieldClassName('content_type', 'w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring')}
                   >
                     {enums?.content_types.map(type => (
                       <option key={type} value={type}>
@@ -376,7 +492,7 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
                     <button
                       type="button"
                       onClick={() => handleCustomEnumToggle('content_type')}
-                      className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800"
+                      className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Add custom type</span>
@@ -412,15 +528,13 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Audience Type
-                </label>
+                {renderFieldLabel('Audience Type', 'audience_type')}
                 <div className="space-y-2">
                   <select
                     name="audience_type"
                     value={formData.audience_type}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    className={getFieldClassName('audience_type', 'w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring')}
                   >
                     {enums?.audience_types.map(type => (
                       <option key={type} value={type}>
@@ -433,7 +547,7 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
                     <button
                       type="button"
                       onClick={() => handleCustomEnumToggle('audience_type')}
-                      className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800"
+                      className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Add custom audience</span>
@@ -469,16 +583,15 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            {/* Approval Status and Source Type */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Approval Status
-                </label>
+                {renderFieldLabel('Approval Status', 'approval_status')}
                 <select
                   name="approval_status"
                   value={formData.approval_status}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  className={getFieldClassName('approval_status', 'w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring')}
                 >
                   {enums?.approval_statuses.map(status => (
                     <option key={status} value={status}>
@@ -489,14 +602,12 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Source Type
-                </label>
+                {renderFieldLabel('Source Type', 'source_type')}
                 <select
                   name="source_type"
                   value={formData.source_type}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  className={getFieldClassName('source_type', 'w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring')}
                 >
                   {enums?.source_types.map(source => (
                     <option key={source} value={source}>
@@ -505,98 +616,92 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
                   ))}
                 </select>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Compliance Score
-                </label>
-                <input
-                  type="number"
-                  name="compliance_score"
-                  value={formData.compliance_score}
-                  onChange={handleInputChange}
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="0.0 - 1.0"
-                />
-              </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            {/* Optional Fields */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Tone
-                </label>
+                {renderFieldLabel('Tone', 'tone')}
                 <input
                   type="text"
                   name="tone"
                   value={formData.tone}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="e.g., professional, casual, educational"
+                  className={getFieldClassName('tone', 'w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring autofill:shadow-[inset_0_0_0px_1000px_hsl(var(--background))] autofill:[-webkit-text-fill-color:hsl(var(--foreground))]')}
+                  placeholder="e.g., Professional, Friendly, Educational"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Topic Focus
-                </label>
+                {renderFieldLabel('Topic Focus', 'topic_focus')}
                 <input
                   type="text"
                   name="topic_focus"
                   value={formData.topic_focus}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="e.g., retirement, investing, tax planning"
+                  className={getFieldClassName('topic_focus', 'w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring autofill:shadow-[inset_0_0_0px_1000px_hsl(var(--background))] autofill:[-webkit-text-fill-color:hsl(var(--foreground))]')}
+                  placeholder="e.g., Retirement, Investing, Tax Planning"
                 />
               </div>
+            </div>
 
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Target Demographics
-                </label>
+                {renderFieldLabel('Target Demographics', 'target_demographics')}
                 <input
                   type="text"
                   name="target_demographics"
                   value={formData.target_demographics}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="e.g., millennials, boomers, high net worth"
+                  className={getFieldClassName('target_demographics', 'w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring autofill:shadow-[inset_0_0_0px_1000px_hsl(var(--background))] autofill:[-webkit-text-fill-color:hsl(var(--foreground))]')}
+                  placeholder="e.g., Young Professionals, Retirees"
+                />
+              </div>
+
+              <div>
+                {renderFieldLabel('Compliance Score', 'compliance_score')}
+                <input
+                  type="number"
+                  name="compliance_score"
+                  value={formData.compliance_score}
+                  onChange={handleInputChange}
+                  className={getFieldClassName('compliance_score', 'w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring autofill:shadow-[inset_0_0_0px_1000px_hsl(var(--background))] autofill:[-webkit-text-fill-color:hsl(var(--foreground))]')}
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  placeholder="0.0 - 1.0"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                Tags
-              </label>
-              <input
-                type="text"
-                name="tags"
-                value={formData.tags}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Enter tags separated by commas"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                {renderFieldLabel('Tags', 'tags')}
+                <input
+                  type="text"
+                  name="tags"
+                  value={formData.tags}
+                  onChange={handleInputChange}
+                  className={getFieldClassName('tags', 'w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring autofill:shadow-[inset_0_0_0px_1000px_hsl(var(--background))] autofill:[-webkit-text-fill-color:hsl(var(--foreground))]')}
+                  placeholder="Comma-separated tags"
+                />
+              </div>
+
+              <div>
+                {renderFieldLabel('Original Source', 'original_source')}
+                <input
+                  type="text"
+                  name="original_source"
+                  value={formData.original_source}
+                  onChange={handleInputChange}
+                  className={getFieldClassName('original_source', 'w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring autofill:shadow-[inset_0_0_0px_1000px_hsl(var(--background))] autofill:[-webkit-text-fill-color:hsl(var(--foreground))]')}
+                  placeholder="Source URL or reference"
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                Original Source
-              </label>
-              <textarea
-                name="original_source"
-                value={formData.original_source}
-                onChange={handleInputChange}
-                rows={2}
-                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="URL, file path, or description of the original source"
-              />
-            </div>
-
-            <div className="flex justify-end space-x-3 pt-4">
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-4 border-t border-border">
               <Button
                 type="button"
                 variant="outline"
@@ -607,16 +712,16 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
               </Button>
               <Button
                 type="submit"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 disabled={isSubmitting}
+                className="min-w-[120px]"
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating...
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    {mode === 'create' ? 'Creating...' : 'Updating...'}
                   </>
                 ) : (
-                  'Create Content'
+                  mode === 'create' ? 'Create Content' : 'Update Content'
                 )}
               </Button>
             </div>

@@ -284,6 +284,9 @@ class ContentManagementService:
                 if "tags" in content_data:
                     content_item.tags = content_data["tags"] if content_data["tags"] else None
                 
+                if "original_source" in content_data:
+                    content_item.original_source = content_data["original_source"] if content_data["original_source"] else None
+                
                 # Update timestamps (use datetime.now instead of func.now for async)
                 from datetime import datetime, timezone
                 content_item.updated_at = datetime.now(timezone.utc)

@@ -17,8 +17,7 @@ import ContentStatsCards from '@/components/content/ContentStatsCards'
 import SearchFilterBar from '@/components/content/SearchFilterBar'
 import ContentTable from '@/components/content/ContentTable'
 import Pagination from '@/components/content/Pagination'
-import AddContentModal from '@/components/content/AddContentModal'
-import EditContentModal from '@/components/content/EditContentModal'
+import ContentModal from '@/components/content/ContentModal'
 import { ThemeToggle } from '@/components/theme'
 
 export default function ContentManagement() {
@@ -28,9 +27,9 @@ export default function ContentManagement() {
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create')
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingContent, setEditingContent] = useState<ContentItem | null>(null)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   const fetchContentData = async () => {
     try {
@@ -86,11 +85,14 @@ export default function ContentManagement() {
   }
 
   const handleAddContent = () => {
-    setIsAddModalOpen(true)
+    setModalMode('create')
+    setEditingContent(null)
+    setIsModalOpen(true)
   }
 
   const handleCloseModal = () => {
-    setIsAddModalOpen(false)
+    setIsModalOpen(false)
+    setEditingContent(null)
   }
 
   const handleContentSuccess = () => {
@@ -98,13 +100,9 @@ export default function ContentManagement() {
   }
 
   const handleEditContent = (content: ContentItem) => {
+    setModalMode('edit')
     setEditingContent(content)
-    setIsEditModalOpen(true)
-  }
-
-  const handleCloseEditModal = () => {
-    setIsEditModalOpen(false)
-    setEditingContent(null)
+    setIsModalOpen(true)
   }
 
   return (
@@ -235,17 +233,11 @@ export default function ContentManagement() {
         </div>
       </div>
 
-      {/* Add Content Modal */}
-      <AddContentModal
-        isOpen={isAddModalOpen}
+      {/* Unified Content Modal */}
+      <ContentModal
+        mode={modalMode}
+        isOpen={isModalOpen}
         onClose={handleCloseModal}
-        onSuccess={handleContentSuccess}
-      />
-
-      {/* Edit Content Modal */}
-      <EditContentModal
-        isOpen={isEditModalOpen}
-        onClose={handleCloseEditModal}
         onSuccess={handleContentSuccess}
         content={editingContent}
       />
