@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Loader2, Plus } from 'lucide-react'
+import { Loader2, Plus, Trash2 } from 'lucide-react'
 import { contentApi } from '@/lib/api'
 import { ContentItem } from './types'
 
@@ -11,6 +11,7 @@ interface ContentModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
+  onDelete?: (content: ContentItem) => void
   content?: ContentItem | null
 }
 
@@ -21,7 +22,7 @@ interface EnumData {
   source_types: string[]
 }
 
-export default function ContentModal({ mode, isOpen, onClose, onSuccess, content }: ContentModalProps) {
+export default function ContentModal({ mode, isOpen, onClose, onSuccess, onDelete, content }: ContentModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingEnums, setIsLoadingEnums] = useState(false)
   const [enums, setEnums] = useState<EnumData | null>(null)
@@ -701,29 +702,51 @@ export default function ContentModal({ mode, isOpen, onClose, onSuccess, content
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end space-x-3 pt-4 border-t border-border">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="min-w-[120px]"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    {mode === 'create' ? 'Creating...' : 'Updating...'}
-                  </>
-                ) : (
-                  mode === 'create' ? 'Create Content' : 'Update Content'
+            <div className="flex justify-between items-center pt-4 border-t border-border">
+              {/* Delete Button (Edit Mode Only) */}
+              <div>
+                {mode === 'edit' && onDelete && content && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      onDelete(content)
+                      handleClose()
+                    }}
+                    disabled={isSubmitting}
+                    className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
                 )}
-              </Button>
+              </div>
+
+              {/* Right Side Buttons */}
+              <div className="flex space-x-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="min-w-[120px]"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      {mode === 'create' ? 'Creating...' : 'Updating...'}
+                    </>
+                  ) : (
+                    mode === 'create' ? 'Create Content' : 'Update Content'
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
         </div>

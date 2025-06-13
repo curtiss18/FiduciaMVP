@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge'
 import { 
   Edit,
   Trash2,
-  Eye,
   CheckCircle,
   AlertCircle,
   MoreVertical
@@ -18,9 +17,10 @@ interface ContentTableProps {
   content: ContentItem[]
   isLoading: boolean
   onEdit: (content: ContentItem) => void
+  onRefresh?: () => void
 }
 
-export default function ContentTable({ content, isLoading, onEdit }: ContentTableProps) {
+export default function ContentTable({ content, isLoading, onEdit, onRefresh }: ContentTableProps) {
   const [openDropdown, setOpenDropdown] = useState<number | null>(null)
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean
@@ -61,12 +61,15 @@ export default function ContentTable({ content, isLoading, onEdit }: ContentTabl
   }
 
   const handleDeleteSuccess = () => {
-    // Temporarily disable auto-refresh for debugging
-    console.log('Delete completed - check if record was actually deleted')
-    // window.location.reload()
+    console.log('Delete completed - refreshing content list')
+    setDeleteModal({ isOpen: false, content: null })
     
-    // Alternative: You could manually refresh the data here
-    // by calling a prop function from the parent component
+    // Call the parent refresh function if available
+    if (onRefresh) {
+      setTimeout(() => {
+        onRefresh()
+      }, 100)
+    }
   }
 
   const getStatusBadgeColor = (status: string) => {
@@ -133,7 +136,12 @@ export default function ContentTable({ content, isLoading, onEdit }: ContentTabl
           {content.map((item) => (
             <tr key={item.id} className="border-b border-border hover:bg-muted/50">
               <td className="py-4 px-4">
-                <div className="font-medium text-foreground">{item.title}</div>
+                <div 
+                  className="font-medium text-foreground hover:text-primary cursor-pointer transition-colors"
+                  onClick={() => handleEditClick(item)}
+                >
+                  {item.title}
+                </div>
                 <div className="text-sm text-muted-foreground truncate max-w-xs">
                   {item.content_text}
                 </div>
@@ -173,16 +181,6 @@ export default function ContentTable({ content, isLoading, onEdit }: ContentTabl
                     {openDropdown === item.id && (
                       <div className="absolute right-0 mt-1 w-32 bg-popover border border-border rounded-md shadow-lg z-10">
                         <div className="py-1">
-                          <button
-                            className="flex items-center w-full px-3 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground"
-                            onClick={() => {
-                              // Handle view action
-                              setOpenDropdown(null)
-                            }}
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            View
-                          </button>
                           <button
                             className="flex items-center w-full px-3 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground"
                             onClick={() => handleEditClick(item)}

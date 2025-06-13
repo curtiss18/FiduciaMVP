@@ -18,6 +18,7 @@ import SearchFilterBar from '@/components/content/SearchFilterBar'
 import ContentTable from '@/components/content/ContentTable'
 import Pagination from '@/components/content/Pagination'
 import ContentModal from '@/components/content/ContentModal'
+import DeleteContentModal from '@/components/content/DeleteContentModal'
 import { ThemeToggle } from '@/components/theme'
 
 export default function ContentManagement() {
@@ -30,6 +31,13 @@ export default function ContentManagement() {
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingContent, setEditingContent] = useState<ContentItem | null>(null)
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean
+    content: ContentItem | null
+  }>({
+    isOpen: false,
+    content: null
+  })
 
   const fetchContentData = async () => {
     try {
@@ -103,6 +111,25 @@ export default function ContentManagement() {
     setModalMode('edit')
     setEditingContent(content)
     setIsModalOpen(true)
+  }
+
+  const handleDeleteContent = (content: ContentItem) => {
+    setDeleteModal({
+      isOpen: true,
+      content: content
+    })
+  }
+
+  const handleDeleteSuccess = () => {
+    setDeleteModal({
+      isOpen: false,
+      content: null
+    })
+    
+    // Add a small delay to ensure backend processing is complete
+    setTimeout(() => {
+      fetchContentData()
+    }, 100)
   }
 
   return (
@@ -203,6 +230,7 @@ export default function ContentManagement() {
               content={paginatedContent} 
               isLoading={isLoading}
               onEdit={handleEditContent}
+              onRefresh={fetchContentData}
             />
             
             {/* Pagination Controls */}
@@ -239,7 +267,16 @@ export default function ContentManagement() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSuccess={handleContentSuccess}
+        onDelete={handleDeleteContent}
         content={editingContent}
+      />
+
+      {/* Delete Content Modal */}
+      <DeleteContentModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, content: null })}
+        onSuccess={handleDeleteSuccess}
+        content={deleteModal.content}
       />
     </div>
   )
