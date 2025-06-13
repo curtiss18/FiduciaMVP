@@ -18,6 +18,7 @@ import SearchFilterBar from '@/components/content/SearchFilterBar'
 import ContentTable from '@/components/content/ContentTable'
 import Pagination from '@/components/content/Pagination'
 import AddContentModal from '@/components/content/AddContentModal'
+import EditContentModal from '@/components/content/EditContentModal'
 import { ThemeToggle } from '@/components/theme'
 
 export default function ContentManagement() {
@@ -28,6 +29,8 @@ export default function ContentManagement() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [editingContent, setEditingContent] = useState<ContentItem | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   const fetchContentData = async () => {
     try {
@@ -92,6 +95,16 @@ export default function ContentManagement() {
 
   const handleContentSuccess = () => {
     fetchContentData()
+  }
+
+  const handleEditContent = (content: ContentItem) => {
+    setEditingContent(content)
+    setIsEditModalOpen(true)
+  }
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false)
+    setEditingContent(null)
   }
 
   return (
@@ -188,7 +201,11 @@ export default function ContentManagement() {
           />
           
           <CardContent>
-            <ContentTable content={paginatedContent} isLoading={isLoading} />
+            <ContentTable 
+              content={paginatedContent} 
+              isLoading={isLoading}
+              onEdit={handleEditContent}
+            />
             
             {/* Pagination Controls */}
             {filteredContent.length > 0 && (
@@ -223,6 +240,14 @@ export default function ContentManagement() {
         isOpen={isAddModalOpen}
         onClose={handleCloseModal}
         onSuccess={handleContentSuccess}
+      />
+
+      {/* Edit Content Modal */}
+      <EditContentModal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        onSuccess={handleContentSuccess}
+        content={editingContent}
       />
     </div>
   )

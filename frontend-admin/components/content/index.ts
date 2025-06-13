@@ -1,5 +1,6 @@
 // Content Management Components
 export { default as AddContentModal } from './AddContentModal'
+export { default as EditContentModal } from './EditContentModal'
 export { default as DeleteContentModal } from './DeleteContentModal'
 export { default as ContentTable } from './ContentTable'
 export { default as ContentStatsCards } from './ContentStatsCards'

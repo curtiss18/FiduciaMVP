@@ -23,3 +23,10 @@ export interface ContentStats {
     percentage: number
   }
 }
+
+export interface EditContentModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onSuccess: () => void
+  content: ContentItem | null
+}

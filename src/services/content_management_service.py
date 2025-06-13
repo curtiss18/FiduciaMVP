@@ -238,7 +238,10 @@ class ContentManagementService:
         """
         try:
             async with AsyncSessionLocal() as db:
-                content_item = db.query(MarketingContent).filter(MarketingContent.id == content_id).first()
+                # Use async query operations (fixed from sync)
+                query = select(MarketingContent).where(MarketingContent.id == content_id)
+                result = await db.execute(query)
+                content_item = result.scalar_one_or_none()
                 
                 if not content_item:
                     return {"status": "error", "error": "Content not found"}
@@ -279,13 +282,14 @@ class ContentManagementService:
                     content_item.compliance_score = content_data["compliance_score"]
                 
                 if "tags" in content_data:
-                    content_item.tags = ",".join(content_data["tags"]) if content_data["tags"] else None
+                    content_item.tags = content_data["tags"] if content_data["tags"] else None
                 
-                # Update timestamps
-                content_item.updated_at = func.now()
+                # Update timestamps (use datetime.now instead of func.now for async)
+                from datetime import datetime, timezone
+                content_item.updated_at = datetime.now(timezone.utc)
                 
-                db.commit()
-                db.refresh(content_item)
+                await db.commit()
+                await db.refresh(content_item)
                 
                 # Re-vectorize if content changed
                 vectorization_result = None
@@ -367,13 +371,16 @@ class ContentManagementService:
             embedding = await embedding_service.generate_embedding(content_item.content_text)
             
             if embedding:
-                # Update content with embedding
+                # Update content with embedding using async operations
                 async with AsyncSessionLocal() as db:
-                    # Re-query to get fresh session
-                    fresh_content = db.query(MarketingContent).filter(MarketingContent.id == content_item.id).first()
+                    # Re-query to get fresh session with async operations
+                    query = select(MarketingContent).where(MarketingContent.id == content_item.id)
+                    result = await db.execute(query)
+                    fresh_content = result.scalar_one_or_none()
+                    
                     if fresh_content:
                         fresh_content.embedding = embedding
-                        db.commit()
+                        await db.commit()
                 
                 return {
                     "status": "success",

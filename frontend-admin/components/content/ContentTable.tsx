@@ -12,28 +12,15 @@ import {
   MoreVertical
 } from 'lucide-react'
 import DeleteContentModal from './DeleteContentModal'
-
-interface ContentItem {
-  id: number
-  title: string
-  content_text: string
-  content_type: string
-  audience_type: string
-  approval_status: string
-  tags: string
-  source: string
-  compliance_notes: string
-  created_at: string
-  updated_at: string
-  is_vectorized: boolean
-}
+import { ContentItem } from './types'
 
 interface ContentTableProps {
   content: ContentItem[]
   isLoading: boolean
+  onEdit: (content: ContentItem) => void
 }
 
-export default function ContentTable({ content, isLoading }: ContentTableProps) {
+export default function ContentTable({ content, isLoading, onEdit }: ContentTableProps) {
   const [openDropdown, setOpenDropdown] = useState<number | null>(null)
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean
@@ -66,6 +53,11 @@ export default function ContentTable({ content, isLoading }: ContentTableProps) 
       content: item
     })
     setOpenDropdown(null) // Close the dropdown
+  }
+
+  const handleEditClick = (item: ContentItem) => {
+    onEdit(item)
+    setOpenDropdown(null)
   }
 
   const handleDeleteSuccess = () => {
@@ -193,10 +185,7 @@ export default function ContentTable({ content, isLoading }: ContentTableProps) 
                           </button>
                           <button
                             className="flex items-center w-full px-3 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground"
-                            onClick={() => {
-                              // Handle edit action
-                              setOpenDropdown(null)
-                            }}
+                            onClick={() => handleEditClick(item)}
                           >
                             <Edit className="w-4 h-4 mr-2" />
                             Edit
