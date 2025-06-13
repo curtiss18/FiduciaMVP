@@ -15,6 +15,7 @@ from src.services.vector_search_service import vector_search_service
 from src.services.warren_database_service import warren_db_service
 from src.services.content_vectorization_service import content_vectorization_service
 from src.services.claude_service import claude_service
+from src.services.prompt_service import prompt_service
 from src.models.refactored_database import ContentType, AudienceType
 
 logger = logging.getLogger(__name__)
@@ -268,12 +269,19 @@ class EnhancedWarrenService:
         content_type: str,
         audience_type: Optional[str]
     ) -> str:
-        """Generate content using Warren with enhanced context."""
-        # Build enhanced context for Warren
-        context_parts = [
-            "You are Warren, an AI assistant specialized in creating SEC and FINRA compliant marketing content for financial advisors.",
-            "\nHere is relevant compliance information from our knowledge base:"
-        ]
+        """Generate content using Warren with enhanced context and centralized prompts."""
+        
+        # Get the base system prompt from centralized prompt service
+        prompt_context = {
+            'platform': self._extract_platform_from_content_type(content_type),
+            'content_type': content_type,
+            'audience_type': audience_type
+        }
+        
+        base_system_prompt = prompt_service.get_warren_system_prompt(prompt_context)
+        
+        # Build enhanced context from knowledge base
+        context_parts = ["\nHere is relevant compliance information from our knowledge base:"]
         
         # Add marketing examples with similarity scores if available
         marketing_examples = context_data.get("marketing_examples", [])
@@ -296,27 +304,43 @@ class EnhancedWarrenService:
             for disclaimer in disclaimers[:2]:
                 context_parts.append(f"\n**{disclaimer['title']}**: {disclaimer['content_text'][:200]}...")
         
-        context = "\n".join(context_parts)
+        knowledge_context = "\n".join(context_parts)
         
-        # Create enhanced prompt for Warren
-        warren_prompt = f"""{context}
+        # Create final prompt combining system prompt with specific context
+        final_prompt = f"""{base_system_prompt}
+
+{knowledge_context}
 
 USER REQUEST: {user_request}
 CONTENT TYPE: {content_type}
 TARGET AUDIENCE: {audience_type or 'general'}
 
-Please create compliant marketing content that:
-1. Follows all SEC Marketing Rule and FINRA 2210 requirements shown above
+Based on the compliance examples and requirements shown above, please create compliant marketing content that:
+1. Follows all SEC Marketing Rule and FINRA 2210 requirements
 2. Includes appropriate disclaimers and risk disclosures
 3. Uses educational tone rather than promotional claims
 4. Avoids performance predictions or guarantees
 5. Is appropriate for the specified platform/content type
-6. References the style and structure of the approved examples above
+6. References the style and structure of the approved examples
+
+Remember to wrap your final marketing content in ##MARKETINGCONTENT## delimiters.
 
 Generate the content now:"""
 
-        # Generate content with Warren
-        return await claude_service.generate_content(warren_prompt)
+        # Generate content with Warren using centralized prompts
+        return await claude_service.generate_content(final_prompt)
+    
+    def _extract_platform_from_content_type(self, content_type: str) -> str:
+        """Extract platform information from content type for prompt context."""
+        platform_mapping = {
+            'linkedin_post': 'linkedin',
+            'email_template': 'email',
+            'website_content': 'website',
+            'newsletter': 'newsletter',
+            'social_media': 'twitter',
+            'blog_post': 'website'
+        }
+        return platform_mapping.get(content_type.lower(), 'general')
 
 
 # Service instance
