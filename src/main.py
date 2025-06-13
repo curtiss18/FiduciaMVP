@@ -16,10 +16,10 @@ app = FastAPI(
     debug=settings.debug
 )
 
-# Add CORS middleware
+# Add CORS middleware - more permissive for development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.backend_cors_origins,
+    allow_origins=settings.backend_cors_origins + ["*"],  # Allow all origins in dev
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

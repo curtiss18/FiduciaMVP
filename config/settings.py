@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     api_v1_str: str = "/api/v1"
     
-    # CORS
-    backend_cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001", "http://localhost:8000"]
+    # CORS - Adding wildcard for development
+    backend_cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:8000", "http://127.0.0.1:3002"]
     
     class Config:
         env_file = ".env"
