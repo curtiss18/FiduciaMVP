@@ -151,7 +151,7 @@ export default function DeleteContentModal({
                 "{content.title}"
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Type: {content.content_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                Type: {content.content_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </p>
               <p className="text-sm text-muted-foreground">
                 ID: {content.id}

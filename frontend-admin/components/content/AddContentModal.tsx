@@ -139,7 +139,7 @@ export default function AddContentModal({ isOpen, onClose, onSuccess }: AddConte
       [enumType]: false
     }))
     
-    showNotification('info', `Custom ${enumType.replace('_', ' ')} "${customValue}" will be submitted. Note: This may require admin approval.`)
+    showNotification('info', `Custom ${enumType.replace(/_/g, ' ')} "${customValue}" will be submitted. Note: This may require admin approval.`)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

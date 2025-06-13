@@ -28,7 +28,7 @@ export function ThemeToggle() {
       case 'system':
         return <Monitor className="h-4 w-4" />
       default:
-        return <Sun className="h-4 w-4" />
+        return <Monitor className="h-4 w-4" />
     }
   }
 
