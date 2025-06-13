@@ -25,25 +25,25 @@ export default function Pagination({
   onPageSizeChange
 }: PaginationProps) {
   return (
-    <div className="border-t border-gray-200 px-6 py-4">
+    <div className="border-t border-border px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <span className="text-sm text-gray-700">
+          <span className="text-sm text-foreground">
             Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} results
           </span>
           
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-700">Show:</span>
+            <span className="text-sm text-muted-foreground">Show:</span>
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-input rounded px-2 py-1 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value={10}>10</option>
               <option value={50}>50</option>
               <option value={100}>100</option>
             </select>
-            <span className="text-sm text-gray-700">per page</span>
+            <span className="text-sm text-muted-foreground">per page</span>
           </div>
         </div>
 
@@ -75,13 +75,13 @@ export default function Pagination({
                 return (
                   <div key={page} className="flex items-center">
                     {showEllipsis && (
-                      <span className="px-2 py-1 text-gray-500">...</span>
+                      <span className="px-2 py-1 text-muted-foreground">...</span>
                     )}
                     <Button
                       variant={currentPage === page ? "default" : "outline"}
                       size="sm"
                       onClick={() => onPageChange(page)}
-                      className={currentPage === page ? "bg-blue-600 text-white" : ""}
+                      className={currentPage === page ? "bg-primary text-primary-foreground" : ""}
                     >
                       {page}
                     </Button>

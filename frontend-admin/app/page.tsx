@@ -20,6 +20,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { systemApi, vectorApi, embeddingsApi, contentApi } from '@/lib/api'
+import { ThemeToggle } from '@/components/theme'
 
 interface SystemHealth {
   status: string
@@ -119,20 +120,22 @@ export default function AdminDashboard() {
   const totalCost = embeddingStatus?.total_cost ?? 0.0004
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       {/* Header */}
-      <div className="border-b bg-white/80 backdrop-blur-sm">
+      <div className="border-b bg-card/80 backdrop-blur-sm">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <Brain className="h-8 w-8 text-blue-600" />
+              <Brain className="h-8 w-8 text-primary" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Fiducia Admin Portal</h1>
-                <p className="text-sm text-gray-600">Vector Search & Content Management</p>
+                <h1 className="text-2xl font-bold text-foreground">Fiducia Admin Portal</h1>
+                <p className="text-sm text-muted-foreground">Vector Search & Content Management</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-3">
+              <ThemeToggle />
+              
               {isLoading ? (
                 <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
                   <Loader2 className="w-4 h-4 mr-1 animate-spin" />
@@ -143,8 +146,8 @@ export default function AdminDashboard() {
                   variant="outline" 
                   className={
                     isSystemHealthy 
-                      ? "bg-green-50 text-green-700 border-green-200" 
-                      : "bg-red-50 text-red-700 border-red-200"
+                      ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800" 
+                      : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800"
                   }
                 >
                   {isSystemHealthy ? (
@@ -172,57 +175,57 @@ export default function AdminDashboard() {
       <div className="container mx-auto px-6 py-8">
         {/* Quick Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+          <Card className="border border-border bg-card hover:bg-accent/50 transition-colors">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <Database className="w-5 h-5 mr-2" />
+              <CardTitle className="text-lg flex items-center text-foreground">
+                <Database className="w-5 h-5 mr-2 text-muted-foreground" />
                 Vector Content
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{totalContent}</div>
-              <p className="text-blue-100 text-sm">
+              <div className="text-3xl font-bold text-foreground">{totalContent}</div>
+              <p className="text-muted-foreground text-sm">
                 {vectorizedContent} vectorized ({Math.round((vectorizedContent / totalContent) * 100)}%)
               </p>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-green-500 to-green-600 text-white">
+          <Card className="border border-border bg-card hover:bg-accent/50 transition-colors">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <Search className="w-5 h-5 mr-2" />
+              <CardTitle className="text-lg flex items-center text-foreground">
+                <Search className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
                 Search Quality
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{avgSimilarity.toFixed(2)}</div>
-              <p className="text-green-100 text-sm">Average similarity score</p>
+              <div className="text-3xl font-bold text-foreground">{avgSimilarity.toFixed(2)}</div>
+              <p className="text-muted-foreground text-sm">Average similarity score</p>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+          <Card className="border border-border bg-card hover:bg-accent/50 transition-colors">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <Zap className="w-5 h-5 mr-2" />
+              <CardTitle className="text-lg flex items-center text-foreground">
+                <Zap className="w-5 h-5 mr-2 text-green-600 dark:text-green-400" />
                 Performance
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">425ms</div>
-              <p className="text-purple-100 text-sm">Average response time</p>
+              <div className="text-3xl font-bold text-foreground">425ms</div>
+              <p className="text-muted-foreground text-sm">Average response time</p>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+          <Card className="border border-border bg-card hover:bg-accent/50 transition-colors">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <TrendingUp className="w-5 h-5 mr-2" />
+              <CardTitle className="text-lg flex items-center text-foreground">
+                <TrendingUp className="w-5 h-5 mr-2 text-orange-600 dark:text-orange-400" />
                 Implementation Cost
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">${totalCost.toFixed(4)}</div>
-              <p className="text-orange-100 text-sm">Total embedding cost</p>
+              <div className="text-3xl font-bold text-foreground">${totalCost.toFixed(4)}</div>
+              <p className="text-muted-foreground text-sm">Total embedding cost</p>
             </CardContent>
           </Card>
         </div>
@@ -230,10 +233,10 @@ export default function AdminDashboard() {
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Vector Search Status */}
-          <Card className="lg:col-span-2 shadow-lg border-0">
+          <Card className="lg:col-span-2 shadow-lg border border-border">
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Brain className="w-6 h-6 mr-2 text-blue-600" />
+                <Brain className="w-6 h-6 mr-2 text-primary" />
                 Vector Search System
                 {isLoading && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
               </CardTitle>
@@ -243,83 +246,83 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="bg-accent/50 p-4 rounded-lg border border-border">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-blue-700">Embedding Model</span>
+                    <span className="text-sm font-medium text-foreground">Embedding Model</span>
                     <Badge variant="secondary">{embeddingStatus?.embedding_model || 'text-embedding-3-large'}</Badge>
                   </div>
-                  <div className="text-2xl font-bold text-blue-900 mt-1">1536</div>
-                  <div className="text-xs text-blue-600">dimensions</div>
+                  <div className="text-2xl font-bold text-foreground mt-1">1536</div>
+                  <div className="text-xs text-muted-foreground">dimensions</div>
                 </div>
                 
-                <div className="bg-green-50 p-4 rounded-lg">
+                <div className="bg-accent/50 p-4 rounded-lg border border-border">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-green-700">Total Cost</span>
-                    <Badge variant="secondary" className="bg-green-100 text-green-800">${totalCost.toFixed(4)}</Badge>
+                    <span className="text-sm font-medium text-foreground">Total Cost</span>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">${totalCost.toFixed(4)}</Badge>
                   </div>
-                  <div className="text-2xl font-bold text-green-900 mt-1">&lt;1¢</div>
-                  <div className="text-xs text-green-600">implementation cost</div>
+                  <div className="text-2xl font-bold text-foreground mt-1">&lt;1¢</div>
+                  <div className="text-xs text-muted-foreground">implementation cost</div>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border">
                   <div className="flex items-center">
                     {isSystemHealthy ? (
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                      <CheckCircle className="w-5 h-5 text-green-500 dark:text-green-400 mr-3" />
                     ) : (
-                      <AlertCircle className="w-5 h-5 text-red-500 mr-3" />
+                      <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400 mr-3" />
                     )}
-                    <span className="font-medium">PostgreSQL + pgvector</span>
+                    <span className="font-medium text-foreground">PostgreSQL + pgvector</span>
                   </div>
                   <Badge 
                     variant="outline" 
                     className={
                       isSystemHealthy 
-                        ? "bg-green-50 text-green-700" 
-                        : "bg-red-50 text-red-700"
+                        ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300" 
+                        : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300"
                     }
                   >
                     {isSystemHealthy ? 'Operational' : 'Error'}
                   </Badge>
                 </div>
                 
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border">
                   <div className="flex items-center">
                     {isSystemHealthy ? (
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                      <CheckCircle className="w-5 h-5 text-green-500 dark:text-green-400 mr-3" />
                     ) : (
-                      <AlertCircle className="w-5 h-5 text-red-500 mr-3" />
+                      <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400 mr-3" />
                     )}
-                    <span className="font-medium">Warren V3 Enhanced</span>
+                    <span className="font-medium text-foreground">Warren V3 Enhanced</span>
                   </div>
                   <Badge 
                     variant="outline" 
                     className={
                       isSystemHealthy 
-                        ? "bg-green-50 text-green-700" 
-                        : "bg-red-50 text-red-700"
+                        ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300" 
+                        : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300"
                     }
                   >
                     {isSystemHealthy ? 'Active' : 'Error'}
                   </Badge>
                 </div>
                 
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-border">
                   <div className="flex items-center">
                     {vectorizedContent === totalContent ? (
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                      <CheckCircle className="w-5 h-5 text-green-500 dark:text-green-400 mr-3" />
                     ) : (
-                      <AlertCircle className="w-5 h-5 text-yellow-500 mr-3" />
+                      <AlertCircle className="w-5 h-5 text-yellow-500 dark:text-yellow-400 mr-3" />
                     )}
-                    <span className="font-medium">Vector Coverage</span>
+                    <span className="font-medium text-foreground">Vector Coverage</span>
                   </div>
                   <Badge 
                     variant="outline" 
                     className={
                       vectorizedContent === totalContent 
-                        ? "bg-green-50 text-green-700" 
-                        : "bg-yellow-50 text-yellow-700"
+                        ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300" 
+                        : "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300"
                     }
                   >
                     {Math.round((vectorizedContent / totalContent) * 100)}%
@@ -330,10 +333,10 @@ export default function AdminDashboard() {
           </Card>
 
           {/* Quick Actions */}
-          <Card className="shadow-lg border-0">
+          <Card className="shadow-lg border border-border">
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Settings className="w-6 h-6 mr-2 text-purple-600" />
+                <Settings className="w-6 h-6 mr-2 text-primary" />
                 Quick Actions
               </CardTitle>
               <CardDescription>
@@ -376,10 +379,10 @@ export default function AdminDashboard() {
         {/* Recent Activity & Content Overview */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
           {/* Content Database Overview */}
-          <Card className="shadow-lg border-0">
+          <Card className="shadow-lg border border-border">
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Database className="w-6 h-6 mr-2 text-blue-600" />
+                <Database className="w-6 h-6 mr-2 text-primary" />
                 Content Database
               </CardTitle>
               <CardDescription>
@@ -388,28 +391,28 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                <div className="flex justify-between items-center p-3 bg-accent/50 rounded-lg border border-border">
                   <div>
-                    <div className="font-medium text-blue-900">Total Content Pieces</div>
-                    <div className="text-sm text-blue-600">All marketing content</div>
+                    <div className="font-medium text-foreground">Total Content Pieces</div>
+                    <div className="text-sm text-muted-foreground">All marketing content</div>
                   </div>
-                  <Badge className="bg-blue-100 text-blue-700">{totalContent} pieces</Badge>
+                  <Badge variant="secondary">{totalContent} pieces</Badge>
                 </div>
                 
-                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                <div className="flex justify-between items-center p-3 bg-accent/50 rounded-lg border border-border">
                   <div>
-                    <div className="font-medium text-green-900">Vectorized Content</div>
-                    <div className="text-sm text-green-600">Ready for semantic search</div>
+                    <div className="font-medium text-foreground">Vectorized Content</div>
+                    <div className="text-sm text-muted-foreground">Ready for semantic search</div>
                   </div>
-                  <Badge className="bg-green-100 text-green-700">{vectorizedContent} pieces</Badge>
+                  <Badge className="bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300">{vectorizedContent} pieces</Badge>
                 </div>
                 
-                <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                <div className="flex justify-between items-center p-3 bg-accent/50 rounded-lg border border-border">
                   <div>
-                    <div className="font-medium text-purple-900">Vector Coverage</div>
-                    <div className="text-sm text-purple-600">Embedding completion rate</div>
+                    <div className="font-medium text-foreground">Vector Coverage</div>
+                    <div className="text-sm text-muted-foreground">Embedding completion rate</div>
                   </div>
-                  <Badge className="bg-purple-100 text-purple-700">
+                  <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
                     {Math.round((vectorizedContent / totalContent) * 100)}%
                   </Badge>
                 </div>
@@ -418,10 +421,10 @@ export default function AdminDashboard() {
           </Card>
 
           {/* System Performance */}
-          <Card className="shadow-lg border-0">
+          <Card className="shadow-lg border border-border">
             <CardHeader>
               <CardTitle className="flex items-center">
-                <TrendingUp className="w-6 h-6 mr-2 text-green-600" />
+                <TrendingUp className="w-6 h-6 mr-2 text-primary" />
                 Live System Status
               </CardTitle>
               <CardDescription>
@@ -431,41 +434,41 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">System Health</span>
-                  <span className={`text-sm font-mono ${isSystemHealthy ? 'text-green-600' : 'text-red-600'}`}>
+                  <span className="text-sm font-medium text-foreground">System Health</span>
+                  <span className={`text-sm font-mono ${isSystemHealthy ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                     {systemHealth?.status || 'Unknown'}
                   </span>
                 </div>
                 
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Vector Coverage</span>
-                  <span className="text-sm text-green-600 font-mono">
+                  <span className="text-sm font-medium text-foreground">Vector Coverage</span>
+                  <span className="text-sm text-green-600 dark:text-green-400 font-mono">
                     {Math.round((vectorizedContent / totalContent) * 100)}%
                   </span>
                 </div>
                 
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Similarity Quality</span>
-                  <span className="text-sm text-green-600 font-mono">{avgSimilarity.toFixed(3)}</span>
+                  <span className="text-sm font-medium text-foreground">Similarity Quality</span>
+                  <span className="text-sm text-green-600 dark:text-green-400 font-mono">{avgSimilarity.toFixed(3)}</span>
                 </div>
                 
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Implementation Cost</span>
-                  <span className="text-sm text-green-600 font-mono">${totalCost.toFixed(4)}</span>
+                  <span className="text-sm font-medium text-foreground">Implementation Cost</span>
+                  <span className="text-sm text-green-600 dark:text-green-400 font-mono">${totalCost.toFixed(4)}</span>
                 </div>
                 
-                <div className={`mt-4 p-3 rounded-lg ${isSystemHealthy ? 'bg-green-50' : 'bg-red-50'}`}>
+                <div className={`mt-4 p-3 rounded-lg border ${isSystemHealthy ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}>
                   <div className="flex items-center">
                     {isSystemHealthy ? (
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+                      <CheckCircle className="w-5 h-5 text-green-500 dark:text-green-400 mr-2" />
                     ) : (
-                      <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+                      <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400 mr-2" />
                     )}
-                    <span className={`text-sm font-medium ${isSystemHealthy ? 'text-green-800' : 'text-red-800'}`}>
+                    <span className={`text-sm font-medium ${isSystemHealthy ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>
                       {isSystemHealthy ? 'All systems operational' : 'System errors detected'}
                     </span>
                   </div>
-                  <div className={`text-xs mt-1 ${isSystemHealthy ? 'text-green-600' : 'text-red-600'}`}>
+                  <div className={`text-xs mt-1 ${isSystemHealthy ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                     Last updated: {lastUpdated.toLocaleTimeString()}
                   </div>
                 </div>

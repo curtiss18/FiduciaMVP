@@ -18,6 +18,7 @@ import SearchFilterBar from '@/components/content/SearchFilterBar'
 import ContentTable from '@/components/content/ContentTable'
 import Pagination from '@/components/content/Pagination'
 import AddContentModal from '@/components/content/AddContentModal'
+import { ThemeToggle } from '@/components/theme'
 
 export default function ContentManagement() {
   const [content, setContent] = useState<ContentItem[]>([])
@@ -94,20 +95,22 @@ export default function ContentManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       {/* Header */}
-      <div className="border-b bg-white/80 backdrop-blur-sm">
+      <div className="border-b bg-card/80 backdrop-blur-sm">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <FileText className="h-8 w-8 text-blue-600" />
+              <FileText className="h-8 w-8 text-primary" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Content Management</h1>
-                <p className="text-sm text-gray-600">Manage compliance & regulatory content</p>
+                <h1 className="text-2xl font-bold text-foreground">Content Management</h1>
+                <p className="text-sm text-muted-foreground">Manage compliance & regulatory content</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-3">
+              <ThemeToggle />
+              
               {isLoading ? (
                 <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
                   <Loader2 className="w-4 h-4 mr-1 animate-spin" />
@@ -129,12 +132,12 @@ export default function ContentManagement() {
         <ContentStatsCards stats={stats} contentLength={content.length} />
 
         {/* Content Table */}
-        <Card className="shadow-lg border-0">
+        <Card className="shadow-lg border border-border">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center">
-                  <Database className="w-6 h-6 mr-2 text-blue-600" />
+                  <Database className="w-6 h-6 mr-2 text-primary" />
                   Content Database
                 </CardTitle>
                 <CardDescription>
@@ -144,12 +147,12 @@ export default function ContentManagement() {
               
               <div className="flex items-center space-x-3">
                 {isLoading ? (
-                  <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+                  <Badge variant="outline" className="bg-muted text-muted-foreground border-border">
                     <Loader2 className="w-4 h-4 mr-1 animate-spin" />
                     Loading...
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800">
                     <CheckCircle className="w-4 h-4 mr-1" />
                     {content.length} Items
                   </Badge>
@@ -164,7 +167,12 @@ export default function ContentManagement() {
                   {isLoading ? 'Refreshing...' : 'Refresh'}
                 </Button>
                 
-                <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleAddContent}>
+                <div className="h-6 w-px bg-border"></div>
+                
+                <Button 
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm px-4 py-2 h-9"
+                  onClick={handleAddContent}
+                >
                   Add Content
                 </Button>
               </div>

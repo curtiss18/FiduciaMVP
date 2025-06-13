@@ -91,18 +91,18 @@ export default function DeleteContentModal({
   if (!isOpen || !content) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-card rounded-lg shadow-xl max-w-md w-full border border-border">
         <div className="p-6">
           <div className="flex items-center space-x-3 mb-4">
             <div className="flex-shrink-0">
-              <AlertTriangle className="w-8 h-8 text-red-500" />
+              <AlertTriangle className="w-8 h-8 text-destructive" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-card-foreground">
                 Delete Content
               </h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 This action cannot be undone
               </p>
             </div>
@@ -110,13 +110,14 @@ export default function DeleteContentModal({
 
           {/* Notification */}
           {notification && (
-            <div className={`mb-4 p-3 rounded-md ${
-              notification.type === 'success' ? 'bg-green-50 border border-green-200' :
-              'bg-red-50 border border-red-200'
+            <div className={`mb-4 p-3 rounded-md border ${
+              notification.type === 'success' 
+                ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' 
+                : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
             }`}>
               <div className="flex items-center">
                 <div className={`flex-shrink-0 ${
-                  notification.type === 'success' ? 'text-green-400' : 'text-red-400'
+                  notification.type === 'success' ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'
                 }`}>
                   {notification.type === 'success' ? (
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -130,7 +131,9 @@ export default function DeleteContentModal({
                 </div>
                 <div className="ml-3">
                   <p className={`text-sm font-medium ${
-                    notification.type === 'success' ? 'text-green-800' : 'text-red-800'
+                    notification.type === 'success' 
+                      ? 'text-green-800 dark:text-green-300' 
+                      : 'text-red-800 dark:text-red-300'
                   }`}>
                     {notification.message}
                   </p>
@@ -140,17 +143,17 @@ export default function DeleteContentModal({
           )}
 
           <div className="mb-6">
-            <p className="text-gray-700">
+            <p className="text-card-foreground">
               Are you sure you want to delete this content?
             </p>
-            <div className="mt-3 p-3 bg-gray-50 rounded-md">
-              <p className="font-medium text-gray-900">
+            <div className="mt-3 p-3 bg-muted/50 rounded-md border border-border">
+              <p className="font-medium text-card-foreground">
                 "{content.title}"
               </p>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Type: {content.content_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 ID: {content.id}
               </p>
             </div>
@@ -169,7 +172,7 @@ export default function DeleteContentModal({
               type="button"
               onClick={handleDelete}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
             >
               {isDeleting ? (
                 <>
