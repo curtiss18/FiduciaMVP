@@ -31,6 +31,14 @@ export interface GeneratedContent {
   disclaimers?: string[]
 }
 
+// Content extraction from Warren responses
+export interface ExtractedContent {
+  marketingContent: string | null
+  conversationalResponse: string
+  hasMarketingContent: boolean
+  title?: string
+}
+
 export interface ConversationContext {
   audience?: string
   purpose?: string

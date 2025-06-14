@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
-import { Message, Conversation, GeneratedContent, WarrenResponse } from '@/lib/types'
+import { Message, Conversation, GeneratedContent, WarrenResponse, ExtractedContent } from '@/lib/types'
 import { warrenChatApi } from '@/lib/api'
 import { getWarrenPrompt } from '@/lib/prompts/warren-prompts'
 import { ChatHeader } from './ChatHeader'
@@ -22,6 +22,48 @@ export const ChatInterface: React.FC = () => {
 
   // Generate unique message ID
   const generateMessageId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  // Parse Warren's response for delimited content
+  const parseWarrenResponse = (response: string): ExtractedContent => {
+    const delimiter = '##MARKETINGCONTENT##';
+    const startIndex = response.indexOf(delimiter);
+    const endIndex = response.lastIndexOf(delimiter);
+    
+    if (startIndex !== -1 && endIndex !== -1 && startIndex !== endIndex) {
+      // Extract the marketing content between delimiters
+      const marketingContent = response.substring(
+        startIndex + delimiter.length, 
+        endIndex
+      ).trim();
+      
+      // Remove the delimited section from the conversational response
+      const beforeDelimiter = response.substring(0, startIndex).trim();
+      const afterDelimiter = response.substring(endIndex + delimiter.length).trim();
+      
+      // Combine the non-marketing parts for chat display
+      const conversationalParts = [beforeDelimiter, afterDelimiter]
+        .filter(part => part.length > 0);
+      const conversationalResponse = conversationalParts.join('\n\n').trim();
+      
+      // Extract title (first line of marketing content)
+      const lines = marketingContent.split('\n').filter(line => line.trim());
+      const title = lines[0]?.trim() || 'Generated Content';
+      
+      return {
+        marketingContent,
+        conversationalResponse: conversationalResponse || 'Content generated successfully!',
+        hasMarketingContent: true,
+        title
+      };
+    }
+    
+    // No delimited content found - return original response
+    return {
+      marketingContent: null,
+      conversationalResponse: response,
+      hasMarketingContent: false
+    };
+  }
 
   // Add message to conversation
   const addMessage = useCallback((message: Omit<Message, 'id' | 'timestamp'>) => {
@@ -53,13 +95,27 @@ export const ChatInterface: React.FC = () => {
       // Get the appropriate system prompt
       const systemPrompt = getWarrenPrompt('main', conversation.context?.platform);
       
+      // Determine if this is a refinement request
+      const isRefinement = generatedContent !== null;
+      const currentContent = generatedContent?.content;
+      
+      // Log refinement detection for debugging
+      console.log('Refinement Detection:', {
+        isRefinement,
+        hasGeneratedContent: !!generatedContent,
+        currentContentLength: currentContent?.length || 0,
+        userMessage: userMessage.substring(0, 50) + (userMessage.length > 50 ? '...' : '')
+      });
+      
       // Prepare context for Warren
       const context = {
         system_prompt: systemPrompt,
         conversation_history: conversation.messages,
-        contentType: conversation.context?.contentType,
-        audience: conversation.context?.audience,
-        platform: conversation.context?.platform
+        contentType: conversation.context?.contentType || generatedContent?.contentType,
+        audience: conversation.context?.audience || generatedContent?.audience,
+        platform: conversation.context?.platform || generatedContent?.platform,
+        current_content: currentContent,
+        is_refinement: isRefinement
       }
 
       // Call Warren API
@@ -70,10 +126,13 @@ export const ChatInterface: React.FC = () => {
       )
 
       if (response.status === 'success' && response.content) {
-        // Add Warren's response
+        // Parse Warren's response for delimited content
+        const extractedContent = parseWarrenResponse(response.content);
+        
+        // Add Warren's conversational response to chat (without marketing content)
         addMessage({
           role: 'warren',
-          content: response.content,
+          content: extractedContent.conversationalResponse,
           type: 'text',
           metadata: {
             contentType: response.metadata?.contentType,
@@ -82,11 +141,11 @@ export const ChatInterface: React.FC = () => {
           }
         })
 
-        // Check if this looks like final content
-        if (isGeneratedContent(response.content)) {
+        // If marketing content was found, set it for preview
+        if (extractedContent.hasMarketingContent && extractedContent.marketingContent) {
           const content: GeneratedContent = {
-            title: extractTitle(response.content) || 'Generated Content',
-            content: response.content,
+            title: extractedContent.title || 'Generated Content',
+            content: extractedContent.marketingContent,
             contentType: response.metadata?.contentType || 'general',
             audience: response.metadata?.audience || 'general_education',
             platform: response.metadata?.platform || 'general',
@@ -119,36 +178,6 @@ export const ChatInterface: React.FC = () => {
       setIsLoading(false)
     }
   }, [conversation, addMessage])
-  // Helper functions
-  const isGeneratedContent = (content: string): boolean => {
-    // Simple heuristic to detect if Warren has generated final content
-    // Look for signs of structured content, disclaimers, or completion phrases
-    const completionIndicators = [
-      'here is your',
-      "here's your",
-      'generated content',
-      'ready for review',
-      'compliance check',
-      'disclaimers:',
-      'risk disclosure'
-    ]
-    
-    const lowerContent = content.toLowerCase()
-    return completionIndicators.some(indicator => lowerContent.includes(indicator)) &&
-           content.length > 100 // Ensure it's substantial content
-  }
-
-  const extractTitle = (content: string): string | null => {
-    // Try to extract a title from the generated content
-    const lines = content.split('\n').filter(line => line.trim())
-    if (lines.length > 0) {
-      const firstLine = lines[0].trim()
-      if (firstLine.length < 100) { // Reasonable title length
-        return firstLine
-      }
-    }
-    return null
-  }
 
   // Helper functions for content preview
   const getPlatformIcon = (platform: string) => {
@@ -186,11 +215,21 @@ export const ChatInterface: React.FC = () => {
   }
 
   const handleCopyContent = () => {
-    addMessage({
-      role: 'warren',
-      content: '✅ Content copied to clipboard! You can now paste it into your preferred platform.',
-      type: 'text'
-    })
+    if (generatedContent?.content) {
+      navigator.clipboard.writeText(generatedContent.content).then(() => {
+        addMessage({
+          role: 'warren',
+          content: '✅ Content copied to clipboard! You can now paste it into your preferred platform.',
+          type: 'text'
+        })
+      }).catch(() => {
+        addMessage({
+          role: 'warren',
+          content: '❌ Failed to copy content. Please try selecting and copying manually.',
+          type: 'text'
+        })
+      })
+    }
   }
 
   const handleSaveContent = () => {
@@ -225,8 +264,12 @@ export const ChatInterface: React.FC = () => {
     }))
   }
   const handleRegenerate = () => {
-    sendMessageToWarren('Please regenerate this content with any improvements you can suggest.')
-    setGeneratedContent(null)
+    if (generatedContent) {
+      sendMessageToWarren(`Please regenerate this ${generatedContent.contentType} with any improvements you can suggest.`)
+      setGeneratedContent(null)
+    } else {
+      sendMessageToWarren('Please regenerate the content with any improvements you can suggest.')
+    }
   }
 
   return (

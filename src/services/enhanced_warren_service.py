@@ -36,7 +36,9 @@ class EnhancedWarrenService:
         content_type: str,
         audience_type: Optional[str] = None,
         user_id: Optional[str] = None,
-        session_id: Optional[str] = None
+        session_id: Optional[str] = None,
+        current_content: Optional[str] = None,
+        is_refinement: bool = False
     ) -> Dict[str, Any]:
         """
         Generate content using enhanced vector search with automatic fallbacks.
@@ -73,7 +75,8 @@ class EnhancedWarrenService:
             
             # Generate content with Warren using the assembled context
             warren_content = await self._generate_with_enhanced_context(
-                context_data, user_request, content_type, audience_type
+                context_data, user_request, content_type, audience_type, 
+                current_content, is_refinement
             )
             
             return {
@@ -267,47 +270,76 @@ class EnhancedWarrenService:
         context_data: Dict[str, Any],
         user_request: str,
         content_type: str,
-        audience_type: Optional[str]
+        audience_type: Optional[str],
+        current_content: Optional[str] = None,
+        is_refinement: bool = False
     ) -> str:
-        """Generate content using Warren with enhanced context and centralized prompts."""
+        """Generate content using Warren with enhanced context and smart prompt selection."""
         
-        # Get the base system prompt from centralized prompt service
-        prompt_context = {
-            'platform': self._extract_platform_from_content_type(content_type),
-            'content_type': content_type,
-            'audience_type': audience_type
-        }
-        
-        base_system_prompt = prompt_service.get_warren_system_prompt(prompt_context)
-        
-        # Build enhanced context from knowledge base
-        context_parts = ["\nHere is relevant compliance information from our knowledge base:"]
-        
-        # Add marketing examples with similarity scores if available
-        marketing_examples = context_data.get("marketing_examples", [])
-        if marketing_examples:
-            context_parts.append(f"\n## APPROVED {content_type.upper()} EXAMPLES:")
-            for example in marketing_examples[:2]:
-                similarity_info = ""
-                if "similarity_score" in example:
-                    similarity_info = f" (relevance: {example['similarity_score']:.2f})"
-                
-                context_parts.append(f"\n**Example{similarity_info}**: {example['title']}")
-                context_parts.append(f"Content: {example['content_text'][:300]}...")
-                if example.get('tags'):
-                    context_parts.append(f"Tags: {example['tags']}")
-        
-        # Add disclaimers
-        disclaimers = context_data.get("disclaimers", [])
-        if disclaimers:
-            context_parts.append(f"\n## REQUIRED DISCLAIMERS:")
-            for disclaimer in disclaimers[:2]:
-                context_parts.append(f"\n**{disclaimer['title']}**: {disclaimer['content_text'][:200]}...")
-        
-        knowledge_context = "\n".join(context_parts)
-        
-        # Create final prompt combining system prompt with specific context
-        final_prompt = f"""{base_system_prompt}
+        # Determine which prompt to use based on whether this is a refinement
+        if is_refinement and current_content:
+            # Use refinement prompt with current content context
+            refinement_context = {
+                'current_content': current_content,
+                'refinement_request': user_request,
+                'platform': self._extract_platform_from_content_type(content_type),
+                'content_type': content_type,
+                'audience_type': audience_type
+            }
+            
+            base_system_prompt = prompt_service.get_warren_refinement_prompt(refinement_context)
+            
+            # For refinement, we primarily focus on the current content and user's request
+            final_prompt = f"""{base_system_prompt}
+
+CURRENT CONTENT TO REFINE:
+##MARKETINGCONTENT##
+{current_content}
+##MARKETINGCONTENT##
+
+USER'S REFINEMENT REQUEST: {user_request}
+
+Please refine the content based on the user's request while maintaining SEC/FINRA compliance.
+Wrap your refined content in ##MARKETINGCONTENT## delimiters and explain your changes."""
+
+        else:
+            # Use main system prompt for new content generation
+            prompt_context = {
+                'platform': self._extract_platform_from_content_type(content_type),
+                'content_type': content_type,
+                'audience_type': audience_type
+            }
+            
+            base_system_prompt = prompt_service.get_warren_system_prompt(prompt_context)
+            
+            # Build enhanced context from knowledge base for new content
+            context_parts = ["\nHere is relevant compliance information from our knowledge base:"]
+            
+            # Add marketing examples with similarity scores if available
+            marketing_examples = context_data.get("marketing_examples", [])
+            if marketing_examples:
+                context_parts.append(f"\n## APPROVED {content_type.upper()} EXAMPLES:")
+                for example in marketing_examples[:2]:
+                    similarity_info = ""
+                    if "similarity_score" in example:
+                        similarity_info = f" (relevance: {example['similarity_score']:.2f})"
+                    
+                    context_parts.append(f"\n**Example{similarity_info}**: {example['title']}")
+                    context_parts.append(f"Content: {example['content_text'][:300]}...")
+                    if example.get('tags'):
+                        context_parts.append(f"Tags: {example['tags']}")
+            
+            # Add disclaimers
+            disclaimers = context_data.get("disclaimers", [])
+            if disclaimers:
+                context_parts.append(f"\n## REQUIRED DISCLAIMERS:")
+                for disclaimer in disclaimers[:2]:
+                    context_parts.append(f"\n**{disclaimer['title']}**: {disclaimer['content_text'][:200]}...")
+            
+            knowledge_context = "\n".join(context_parts)
+            
+            # Create final prompt combining system prompt with specific context
+            final_prompt = f"""{base_system_prompt}
 
 {knowledge_context}
 
@@ -327,7 +359,7 @@ Remember to wrap your final marketing content in ##MARKETINGCONTENT## delimiters
 
 Generate the content now:"""
 
-        # Generate content with Warren using centralized prompts
+        # Generate content with Warren using the appropriate prompt
         return await claude_service.generate_content(final_prompt)
     
     def _extract_platform_from_content_type(self, content_type: str) -> str:

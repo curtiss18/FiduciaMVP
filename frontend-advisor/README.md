@@ -1,45 +1,41 @@
-# Fiducia Advisor Portal
+# Fiducia Advisor Portal - Setup
 
-Warren AI chat interface for financial advisors to create compliance-focused content.
+Revolutionary Warren AI chat interface with intelligent refinement system for financial advisors.
 
-## Getting Started
+## Quick Start
 
-1. Install dependencies:
 ```bash
+# Install dependencies
 npm install
-```
 
-2. Start the development server:
-```bash
+# Start development server (port 3002)
 npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
 ```
 
-3. Open [http://localhost:3002](http://localhost:3002) in your browser.
+## Access
 
-## Features
+- **Development**: http://localhost:3002
+- **Features**: Warren AI chat, intelligent refinement, split-screen interface
+- **Tech Stack**: Next.js 14, TypeScript, Tailwind CSS, Shadcn/ui
 
-- **Warren AI Chat**: Conversational interface for content creation
-- **Compliance Guidance**: Warren proactively asks for compliance requirements
-- **Content Preview**: Live preview of generated compliant content
-- **Professional UI**: Enterprise-grade interface matching admin portal
+## Revolutionary Features
 
-## Tech Stack
+- **Context-Aware AI**: Warren automatically switches between creation and refinement modes
+- **Split-Screen Design**: Chat on left, content preview on right
+- **Clean Content Separation**: Marketing content isolated using delimiter system
+- **Professional UX**: Enterprise-grade interface with real-time processing
 
-- **Next.js 14** with App Router
-- **TypeScript** for type safety
-- **Tailwind CSS** for styling
-- **Shadcn/ui** for components
-- **Axios** for API integration
+## Development
 
-## API Integration
+- **API Integration**: Connects to FastAPI backend at `http://localhost:8000`
+- **Refinement Detection**: Automatic switching between AI prompts based on conversation stage
+- **Content Processing**: Delimiter-based extraction with `##MARKETINGCONTENT##` parsing
+- **Debug Logging**: Console output for refinement detection during development
 
-Connects to FiduciaMVP backend at `http://localhost:8000/api/v1`
-
-Main endpoint: `/warren/generate-v3` for conversational content generation
-
-## Development Notes
-
-- Port: 3002 (to avoid conflicts with admin portal on 3001)
-- Responsive design for desktop and mobile
-- Real-time chat interface with loading states
-- Content persistence using localStorage (Phase 1)
+For complete documentation and architecture details, see the main project README.

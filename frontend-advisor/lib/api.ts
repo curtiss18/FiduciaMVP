@@ -36,7 +36,9 @@ export const warrenChatApi = {
       content_type: context?.contentType || 'linkedin_post',
       audience_type: context?.audience || 'general_education',
       conversation_id: conversationId,
-      previous_context: context
+      previous_context: context,
+      current_content: context?.current_content,
+      is_refinement: context?.is_refinement || false
     });
     return response.data;
   },

@@ -272,6 +272,7 @@ async def warren_generate_content_v3(request: dict):
     - Primary: Vector similarity search
     - Fallback: Text search if vector fails
     - Emergency fallback: Original Warren V2
+    - Smart prompt selection: Main vs refinement prompts
     """
     user_request = request.get("request", "")
     content_type = request.get("content_type", "linkedin_post")
@@ -279,17 +280,23 @@ async def warren_generate_content_v3(request: dict):
     user_id = request.get("user_id")
     session_id = request.get("session_id")
     
+    # NEW: Check for refinement context
+    current_content = request.get("current_content")
+    is_refinement = request.get("is_refinement", False)
+    
     if not user_request:
         return {"error": "Content request is required"}
     
     try:
-        # Use the enhanced Warren service with vector search
+        # Use the enhanced Warren service with refinement support
         result = await enhanced_warren_service.generate_content_with_enhanced_context(
             user_request=user_request,
             content_type=content_type,
             audience_type=audience_type,
             user_id=user_id,
-            session_id=session_id
+            session_id=session_id,
+            current_content=current_content,
+            is_refinement=is_refinement
         )
         
         return result
