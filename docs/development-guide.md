@@ -55,14 +55,35 @@
 docker-compose up -d                    # Start infrastructure
 source venv/bin/activate               # Activate environment
 uvicorn src.main:app --reload           # Start API server
+
+# Start frontend portals (in separate terminals)
+cd frontend-admin && npm run dev        # Admin portal (localhost:3001)
+cd frontend-advisor && npm run dev      # Advisor portal (localhost:3002)
+
 python tests/test_warren_basic.py       # Verify functionality
 ```
+
+#### **Portal Development URLs**
+- **Admin Portal**: http://localhost:3001 - Content management, system monitoring
+- **Advisor Portal**: http://localhost:3002 - Warren chat interface
+- **API Backend**: http://localhost:8000 - FastAPI with Warren V3
+- **API Documentation**: http://localhost:8000/docs - Interactive API docs
 
 ## 🏗️ **Architecture Overview**
 
 ### **Project Structure**
 ```
 FiduciaMVP/
+├── shared-ui/                         # 🆕 Shared Design System
+│   ├── components/
+│   │   └── theme/                     # Theme components
+│   │       ├── index.ts               # Clean exports
+│   │       ├── theme-provider.tsx     # Context-based theme management
+│   │       └── theme-toggle.tsx       # Icon-only theme switching
+│   └── styles/
+│       └── globals.css                # Master design system CSS
+├── frontend-admin/                    # Admin Portal (uses shared-ui)
+├── frontend-advisor/                  # Advisor Portal (uses shared-ui)
 ├── src/
 │   ├── api/
 │   │   └── endpoints.py               # FastAPI routes
@@ -85,6 +106,36 @@ FiduciaMVP/
 ├── tests/                             # Test files
 ├── data/knowledge_base/               # Compliance content
 └── docker-compose.yml                # Infrastructure
+```
+
+### **🎨 Shared Design System**
+
+**Revolutionary Feature**: Zero code duplication between portals with unified brand experience.
+
+#### **Key Benefits**
+- **Single Source of Truth**: All styling and theming in one location
+- **Zero Duplication**: Both portals use identical design system
+- **Easy Maintenance**: Update design globally from `shared-ui/`
+- **Scalable Architecture**: Ready for mobile apps, public website, white-labeling
+- **Professional Polish**: Consistent brand experience across entire platform
+
+#### **Design System Components**
+- **ThemeProvider**: Context-based theme management with localStorage persistence
+- **ThemeToggle**: Icon-only theme switching (light/dark/system modes)
+- **CSS Custom Properties**: Complete design token system for consistency
+- **Professional Dark Mode**: VS Code-inspired with smooth 200ms transitions
+
+#### **Usage in Portals**
+```typescript
+// Both portals import from shared location
+import { ThemeProvider, ThemeToggle } from '../../shared-ui/components/theme'
+import '../../shared-ui/styles/globals.css'
+
+// Admin portal example
+<ThemeToggle ButtonComponent={Button} icons={{ Sun, Moon, Monitor }} />
+
+// Advisor portal example  
+<ThemeToggle ButtonComponent={Button} icons={{ Sun, Moon, Monitor }} />
 ```
 
 ### **Key Services**
@@ -294,6 +345,45 @@ components/content/
 
 ## 🔧 **Development Tasks**
 
+### **🎨 Working with Shared Design System**
+
+#### **Adding New Theme Components**
+```typescript
+// 1. Create component in shared-ui/components/theme/
+// 2. Export from shared-ui/components/theme/index.ts
+export { NewThemeComponent } from './new-theme-component'
+
+// 3. Import in both portals
+import { NewThemeComponent } from '../../shared-ui/components/theme'
+```
+
+#### **Updating Design System**
+```css
+/* Update shared-ui/styles/globals.css */
+/* Changes automatically apply to both portals */
+:root {
+  --new-color: 220 13% 50%;
+}
+
+.dark {
+  --new-color: 220 13% 70%;
+}
+```
+
+#### **Adding New Shared Components**
+```typescript
+// 1. Create in shared-ui/components/ui/new-component.tsx
+// 2. Add to shared-ui/components/ui/index.ts
+// 3. Import in portals: import { NewComponent } from '../../shared-ui/components/ui'
+```
+
+#### **Design System Best Practices**
+- **Test both portals** when making changes to shared-ui/
+- **Use CSS custom properties** for all colors and spacing
+- **Maintain accessibility** with proper contrast ratios
+- **Add smooth transitions** for professional polish
+- **Consider mobile responsiveness** in all components
+
 ### **Adding New Content Types**
 
 1. **Update Database Enum**
@@ -376,6 +466,38 @@ components/content/
    ```
 
 ## 🧪 **Testing Guidelines**
+
+### **🎨 Shared Design System Testing**
+
+#### **Visual Consistency Testing**
+```bash
+# Test both portals simultaneously
+1. Open admin portal: http://localhost:3001
+2. Open advisor portal: http://localhost:3002
+3. Switch themes in both portals - should look identical
+4. Test all theme modes: light → dark → system
+5. Verify theme persistence across page reloads
+```
+
+#### **Theme System Testing**
+```typescript
+// Test theme switching functionality
+1. Click theme toggle in both portals
+2. Verify HTML class changes: <html class="dark"> or <html class="light">
+3. Check CSS custom properties update correctly
+4. Confirm smooth transitions (200ms duration)
+5. Test independent theme storage (different keys per portal)
+```
+
+#### **Responsive Design Testing**
+```bash
+# Test shared components across viewports
+1. Test desktop: 1920x1080, 1366x768
+2. Test tablet: 768x1024, 1024x768  
+3. Test mobile: 375x667, 414x896
+4. Verify theme toggle works on all screen sizes
+5. Check component layouts remain professional
+```
 
 ### **Unit Testing**
 ```python
@@ -706,11 +828,20 @@ async def health_check():
 
 ## 🎯 **Best Practices**
 
+### **🎨 Shared Design System**
+- **Single Source of Truth**: All styling changes in `shared-ui/styles/globals.css`
+- **Component Reusability**: Create shared components for common UI patterns
+- **Theme Consistency**: Test changes in both portals before committing
+- **Accessibility First**: Maintain proper contrast ratios and screen reader support
+- **Performance**: Use CSS custom properties for efficient theme switching
+- **Mobile Responsive**: All shared components must work across device sizes
+
 ### **Code Quality**
 - **Component Decomposition**: Maximum 200 lines per component
 - **Type Safety**: Complete TypeScript coverage
 - **Error Handling**: Graceful degradation and user feedback
 - **Performance**: Optimized rendering and API calls
+- **Zero Duplication**: Use shared-ui for all common functionality
 
 ### **API Design**
 - **RESTful Principles**: Consistent endpoint naming and HTTP methods
@@ -754,6 +885,6 @@ async def health_check():
 
 ---
 
-**This development guide provides everything needed to build, deploy, and maintain FiduciaMVP as the world's leading AI compliance platform.** 🚀
+**This development guide provides everything needed to build, deploy, and maintain FiduciaMVP as the world's leading AI compliance platform with unified design system.** 🚀
 
-*Ready to revolutionize financial compliance with intelligent AI assistance.*
+*Ready to revolutionize financial compliance with intelligent AI assistance and professional brand consistency.*

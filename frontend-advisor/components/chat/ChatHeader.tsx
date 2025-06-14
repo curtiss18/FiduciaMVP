@@ -1,6 +1,7 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, Settings, User } from 'lucide-react'
+import { RefreshCw, Settings, User, Moon, Sun, Monitor } from 'lucide-react'
+import { ThemeToggle } from '../../../shared-ui/components/theme'
 
 interface ChatHeaderProps {
   onRefresh?: () => void
@@ -31,6 +32,11 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             <User className="h-4 w-4" />
             <span>{advisorName}</span>
           </div>
+          
+          <ThemeToggle 
+            ButtonComponent={Button}
+            icons={{ Sun, Moon, Monitor }}
+          />
           
           <Button variant="ghost" size="sm" onClick={onRefresh}>
             <RefreshCw className="h-4 w-4" />

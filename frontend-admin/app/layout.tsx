@@ -1,8 +1,8 @@
-import './globals.css'
+import '../../shared-ui/styles/globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { cn } from '@/lib/utils'
-import { ThemeProvider } from '@/components/theme'
+import { ThemeProvider } from '../../shared-ui/components/theme'
 
 const inter = Inter({ subsets: ['latin'] })
 

@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Custom Properties - Design System */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 220 13% 9%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 13% 9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 13% 9%;
+  --primary: 220 13% 9%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 220 13% 9%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 220 13% 9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 220 13% 9%;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: 220 13% 18%;
+  --foreground: 220 9% 85%;
+  --card: 220 13% 16%;
+  --card-foreground: 220 9% 85%;
+  --popover: 220 13% 16%;
+  --popover-foreground: 220 9% 85%;
+  --primary: 220 13% 91%;
+  --primary-foreground: 220 13% 9%;
+  --secondary: 220 13% 21%;
+  --secondary-foreground: 220 9% 85%;
+  --muted: 220 13% 21%;
+  --muted-foreground: 220 5% 65%;
+  --accent: 220 13% 25%;
+  --accent-foreground: 220 9% 85%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 220 13% 25%;
+  --input: 220 13% 25%;
+  --ring: 220 9% 85%;
+}
+
+/* Base Styles */
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  transition: background-color 0.2s, color 0.2s;
+}
+
+@layer base {
+  * {
+    @apply border-border transition-colors duration-200;
+  }
+}
+
+/* Portal-specific Styles */
+@layer components {
+  /* Chat-specific styles for advisor portal */
+  .chat-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .messages-container {
+    flex: 1;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+  }
+
+  .message-bubble {
+    max-width: 80%;
+    word-wrap: break-word;
+  }
+
+  .advisor-message {
+    @apply ml-auto bg-primary text-primary-foreground;
+  }
+
+  .warren-message {
+    @apply mr-auto bg-muted text-muted-foreground;
+  }
+
+  .content-preview-panel {
+    overflow-y: auto;
+  }
+
+  .content-display {
+    max-height: none;
+  }
+
+  /* Loading animation */
+  .typing-indicator {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .typing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: currentColor;
+    animation: typing 1.4s infinite ease-in-out;
+  }
+
+  .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+  .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+  @keyframes typing {
+    0%, 80%, 100% { 
+      transform: scale(0.8);
+      opacity: 0.5;
+    }
+    40% { 
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+}

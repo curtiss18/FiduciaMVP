@@ -17,10 +17,13 @@ import {
   Settings,
   FileText,
   Brain,
-  Loader2
+  Loader2,
+  Moon,
+  Sun,
+  Monitor
 } from 'lucide-react'
 import { systemApi, vectorApi, embeddingsApi, contentApi } from '@/lib/api'
-import { ThemeToggle } from '@/components/theme'
+import { ThemeToggle } from '../../shared-ui/components/theme'
 
 interface SystemHealth {
   status: string
@@ -134,7 +137,10 @@ export default function AdminDashboard() {
             </div>
             
             <div className="flex items-center space-x-3">
-              <ThemeToggle />
+              <ThemeToggle 
+                ButtonComponent={Button} 
+                icons={{ Sun, Moon, Monitor }}
+              />
               
               {isLoading ? (
                 <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
