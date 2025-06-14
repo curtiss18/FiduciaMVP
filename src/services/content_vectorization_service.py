@@ -275,6 +275,101 @@ class ContentVectorizationService:
             except Exception as e:
                 logger.error(f"Error estimating vectorization cost: {str(e)}")
                 return {"error": str(e)}
+    
+    async def vectorize_existing_compliance_rules(self, force_update: bool = False) -> Dict[str, Any]:
+        """
+        Generate embeddings for all existing compliance rules.
+        
+        Args:
+            force_update: If True, regenerate embeddings even if they exist
+            
+        Returns:
+            Results summary with counts and any errors
+        """
+        async with AsyncSessionLocal() as db:
+            try:
+                # Get compliance rules that need embeddings
+                if force_update:
+                    # Get all compliance rules
+                    query = select(ComplianceRules)
+                else:
+                    # Get only rules without embeddings
+                    query = select(ComplianceRules).where(
+                        ComplianceRules.embedding.is_(None)
+                    )
+                
+                result = await db.execute(query)
+                compliance_rules = result.scalars().all()
+                
+                if not compliance_rules:
+                    return {
+                        "status": "success",
+                        "message": "No compliance rules need vectorization",
+                        "processed": 0,
+                        "total_cost": 0.0
+                    }
+                
+                processed = 0
+                failed = 0
+                total_cost = 0.0
+                errors = []
+                
+                logger.info(f"Starting vectorization of {len(compliance_rules)} compliance rules")
+                
+                for rule in compliance_rules:
+                    try:
+                        # Prepare text for embedding using correct field names and parameters
+                        prepared_text = embedding_service.prepare_text_for_embedding(
+                            title=rule.regulation_name,  # Use regulation_name as title
+                            content=rule.requirement_text,  # Use requirement_text as content
+                            content_type=getattr(rule, 'prohibition_type', None),  # Map prohibition_type to content_type
+                            audience_type=getattr(rule, 'applicability_scope', None),  # Map applicability_scope to audience_type
+                            tags=getattr(rule, 'applies_to_content_types', None)  # Keep tags as is
+                        )
+                        
+                        # Generate embedding
+                        embedding = await embedding_service.generate_embedding(prepared_text)
+                        
+                        if embedding:
+                            rule.embedding = embedding
+                            processed += 1
+                            
+                            # Calculate cost
+                            token_count = embedding_service.count_tokens(prepared_text)
+                            cost = embedding_service.estimate_cost(token_count)
+                            total_cost += cost
+                            
+                            logger.info(f"Vectorized compliance rule: {rule.regulation_name} ({token_count} tokens, ${cost:.6f})")
+                        else:
+                            failed += 1
+                            errors.append(f"Failed to generate embedding for rule: {rule.regulation_name}")
+                            
+                    except Exception as e:
+                        failed += 1
+                        error_msg = f"Error processing rule {rule.regulation_name}: {str(e)}"
+                        errors.append(error_msg)
+                        logger.error(error_msg)
+                
+                # Commit all changes
+                await db.commit()
+                
+                return {
+                    "status": "success" if failed == 0 else "partial_success",
+                    "processed": processed,
+                    "failed": failed,
+                    "total_rules": len(compliance_rules),
+                    "total_cost": total_cost,
+                    "errors": errors,
+                    "message": f"Vectorized {processed} compliance rules (${total_cost:.6f} total cost)"
+                }
+                
+            except Exception as e:
+                logger.error(f"Error vectorizing compliance rules: {str(e)}")
+                await db.rollback()
+                return {
+                    "status": "error",
+                    "error": str(e)
+                }
 
 
 # Service instance

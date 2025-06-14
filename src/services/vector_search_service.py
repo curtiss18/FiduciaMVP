@@ -379,6 +379,47 @@ class VectorSearchService:
             except Exception as e:
                 logger.error(f"Error getting vector search stats: {str(e)}")
                 return {"error": str(e)}
+    
+    async def check_readiness(self) -> Dict[str, Any]:
+        """
+        Check if vector search is ready for use.
+        
+        Returns:
+            Dict with ready status and reason if not ready
+        """
+        async with AsyncSessionLocal() as db:
+            try:
+                # Simple check: count marketing content with embeddings
+                marketing_with_embeddings = await db.execute(
+                    select(func.count(MarketingContent.id)).where(
+                        MarketingContent.embedding.isnot(None)
+                    )
+                )
+                marketing_embedded_count = marketing_with_embeddings.scalar()
+                
+                if marketing_embedded_count > 0:
+                    return {
+                        "ready": True,
+                        "reason": "vector_search_operational",
+                        "marketing_content_count": marketing_embedded_count
+                    }
+                else:
+                    return {
+                        "ready": False,
+                        "reason": "no_vectorized_content",
+                        "marketing_content_count": 0
+                    }
+                    
+            except Exception as e:
+                logger.error(f"Error checking vector search readiness: {str(e)}")
+                # If there's a database error, assume vector search is not ready
+                return {
+                    "ready": False,
+                    "reason": f"database_error: {str(e)}"
+                }
+            finally:
+                # Ensure clean transaction state
+                await db.rollback()
 
 
 # Service instance

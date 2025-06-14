@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useState, useCallback, useEffect } from 'react'
-import { Message, Conversation, GeneratedContent, WarrenResponse, ExtractedContent } from '@/lib/types'
+import { Message, Conversation, GeneratedContent, WarrenResponse, ExtractedContent, SourceInformation } from '@/lib/types'
 import { warrenChatApi } from '@/lib/api'
 import { ChatHeader } from './ChatHeader'
 import { MessageHistory } from './MessageHistory'
 import { ChatInput } from './ChatInput'
+import { SourceInfoBadges } from '@/components/content'
 import { Button } from '@/components/ui/button'
 import { Copy, Save, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -26,6 +27,26 @@ export const ChatInterface: React.FC = () => {
 
   // Generate unique message ID
   const generateMessageId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  // Build source information from Warren response
+  const buildSourceInformation = (response: WarrenResponse): SourceInformation => {
+    // Calculate source breakdown from available data
+    const totalSources = response.total_knowledge_sources || 0
+    const vectorResults = response.vector_results_found || 0
+    const textResults = response.text_results_found || 0
+    
+    // Try to get specific breakdown if available from backend
+    const marketingExamples = response.marketing_examples_count || Math.floor(vectorResults * 0.7) // Estimate if not provided
+    const complianceRules = response.compliance_rules_count || Math.floor(totalSources - marketingExamples) // Remainder
+    
+    return {
+      totalSources,
+      marketingExamples: Math.max(0, marketingExamples),
+      complianceRules: Math.max(0, complianceRules),
+      searchStrategy: response.search_strategy || 'vector',
+      fallbackUsed: response.fallback_used || false
+    }
+  }
 
   // Parse Warren's response for delimited content
   const parseWarrenResponse = (response: string): ExtractedContent => {
@@ -144,13 +165,17 @@ export const ChatInterface: React.FC = () => {
 
         // If marketing content was found, set it for preview
         if (extractedContent.hasMarketingContent && extractedContent.marketingContent) {
+          // Build source information from Warren's response
+          const sourceInfo = buildSourceInformation(response)
+          
           const content: GeneratedContent = {
             title: extractedContent.title || 'Generated Content',
             content: extractedContent.marketingContent,
             contentType: response.metadata?.contentType || 'general',
             audience: response.metadata?.audience || 'general_education',
             platform: response.metadata?.platform || 'general',
-            complianceScore: response.context_quality_score
+            complianceScore: response.context_quality_score,
+            sourceInfo
           }
           
           setGeneratedContent(content)
@@ -470,14 +495,21 @@ export const ChatInterface: React.FC = () => {
                       <h3 className="font-semibold">
                         {generatedContent.title || 'Generated Content'}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {generatedContent.contentType} • {getAudienceLabel(generatedContent.audience)}
-                        {generatedContent.complianceScore && (
-                          <span className="ml-2 text-green-600 dark:text-green-400">
-                            • Compliance Score: {Math.round(generatedContent.complianceScore * 100)}%
-                          </span>
+                      <div className="space-y-1">
+                        <div className="text-sm text-muted-foreground">
+                          {generatedContent.contentType} • {getAudienceLabel(generatedContent.audience)}
+                          {generatedContent.complianceScore && (
+                            <span className="ml-2 text-green-600 dark:text-green-400">
+                              • Compliance Score: {Math.round(generatedContent.complianceScore * 100)}%
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Source Information Badges */}
+                        {generatedContent.sourceInfo && (
+                          <SourceInfoBadges sourceInfo={generatedContent.sourceInfo} />
                         )}
-                      </p>
+                      </div>
                     </div>
                   </div>
                   

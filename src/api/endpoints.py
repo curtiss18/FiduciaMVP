@@ -330,6 +330,21 @@ async def vectorize_existing_content(force_update: bool = False):
         return {"status": "error", "error": str(e)}
 
 
+@router.post("/embeddings/vectorize-compliance-rules")
+async def vectorize_existing_compliance_rules(force_update: bool = False):
+    """
+    Generate embeddings for all existing compliance rules.
+    This enables full vector search including disclaimers and compliance guidance.
+    """
+    try:
+        result = await content_vectorization_service.vectorize_existing_compliance_rules(
+            force_update=force_update
+        )
+        return result
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 @router.get("/embeddings/status")
 async def get_vectorization_status():
     """Get current status of content vectorization."""

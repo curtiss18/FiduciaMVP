@@ -29,6 +29,16 @@ export interface GeneratedContent {
   platform: string
   complianceScore?: number
   disclaimers?: string[]
+  // Source information for transparency
+  sourceInfo?: SourceInformation
+}
+
+export interface SourceInformation {
+  totalSources: number
+  marketingExamples: number
+  complianceRules: number
+  searchStrategy: 'vector' | 'hybrid' | 'text'
+  fallbackUsed: boolean
 }
 
 // Content extraction from Warren responses
@@ -65,9 +75,13 @@ export interface WarrenResponse {
   error?: string
   search_strategy?: 'vector' | 'hybrid' | 'text'
   vector_results_found?: number
+  text_results_found?: number
   total_knowledge_sources?: number
   fallback_used?: boolean
   context_quality_score?: number
+  // Additional source breakdown (if available from backend)
+  marketing_examples_count?: number
+  compliance_rules_count?: number
   metadata?: {
     contentType?: string
     audience?: string

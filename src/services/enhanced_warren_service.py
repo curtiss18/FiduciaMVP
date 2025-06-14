@@ -61,7 +61,6 @@ class EnhancedWarrenService:
             
             # Fall back to text search if vector search results are poor
             if not context_quality["sufficient"]:
-                logger.info(f"Vector search insufficient, falling back to text search")
                 fallback_context = await self._get_text_search_context(
                     user_request, content_type, content_type_enum
                 )
@@ -72,6 +71,7 @@ class EnhancedWarrenService:
                 context_data["fallback_reason"] = context_quality["reason"]
             else:
                 context_data["fallback_used"] = False
+                context_data["search_strategy"] = "vector"  # Explicitly set vector strategy
             
             # Generate content with Warren using the assembled context
             warren_content = await self._generate_with_enhanced_context(
@@ -87,6 +87,8 @@ class EnhancedWarrenService:
                 "vector_results_found": context_data.get("vector_results_count", 0),
                 "text_results_found": context_data.get("text_results_count", 0),
                 "total_knowledge_sources": context_data.get("total_sources", 0),
+                "marketing_examples_count": len(context_data.get("marketing_examples", [])),
+                "compliance_rules_count": len(context_data.get("disclaimers", [])),
                 "fallback_used": context_data.get("fallback_used", False),
                 "fallback_reason": context_data.get("fallback_reason"),
                 "context_quality_score": context_quality.get("score", 0.5),
@@ -131,9 +133,9 @@ class EnhancedWarrenService:
                 return {"marketing_examples": [], "disclaimers": [], "vector_available": False}
             
             # Check if vector search is available
-            vector_stats = await vector_search_service.get_vector_search_stats()
-            if not vector_stats.get("vector_search_ready", False):
-                logger.warning("Vector search not ready - no embeddings available")
+            readiness_check = await vector_search_service.check_readiness()
+            if not readiness_check.get("ready", False):
+                logger.warning(f"Vector search not ready: {readiness_check.get('reason', 'Unknown')}")
                 return {"marketing_examples": [], "disclaimers": [], "vector_available": False}
             
             # Search for relevant marketing content examples
@@ -144,20 +146,35 @@ class EnhancedWarrenService:
                 limit=3
             )
             
-            # Search for disclaimers (broader search)
-            disclaimer_query = f"{content_type} disclaimer risk disclosure"
-            disclaimers = await vector_search_service.search_marketing_content(
-                query_text=disclaimer_query,
-                similarity_threshold=0.1,  # Very low for debugging
-                limit=3
-            )
+            # Try to search compliance rules, but fall back gracefully if it fails
+            compliance_rules = []
+            try:
+                compliance_rules = await vector_search_service.search_compliance_rules(
+                    query_text=f"{content_type} compliance rules disclaimer",
+                    content_type=content_type,
+                    similarity_threshold=0.1,
+                    limit=3
+                )
+            except Exception as e:
+                logger.warning(f"Compliance rules vector search failed: {e}, continuing with marketing examples only")
+                compliance_rules = []
             
-            # Filter disclaimers to only include actual disclaimers
-            disclaimers = [
-                d for d in disclaimers 
-                if any(keyword in d.get("title", "").lower() or keyword in d.get("tags", "").lower() 
-                       for keyword in ["disclaimer", "risk", "disclosure"])
-            ]
+            # If no compliance rules found via vector search, try marketing content for disclaimers as backup
+            disclaimers = compliance_rules
+            if not disclaimers:
+                disclaimer_query = f"{content_type} disclaimer risk disclosure"
+                potential_disclaimers = await vector_search_service.search_marketing_content(
+                    query_text=disclaimer_query,
+                    similarity_threshold=0.1,
+                    limit=3
+                )
+                
+                # Filter for disclaimer-like content
+                disclaimers = [
+                    d for d in potential_disclaimers 
+                    if any(keyword in d.get("title", "").lower() or keyword in d.get("tags", "").lower() 
+                           for keyword in ["disclaimer", "risk", "disclosure"])
+                ]
             
             return {
                 "marketing_examples": marketing_examples,
@@ -165,7 +182,8 @@ class EnhancedWarrenService:
                 "vector_available": True,
                 "search_method": "vector",
                 "vector_results_count": len(marketing_examples),
-                "disclaimer_count": len(disclaimers)
+                "disclaimer_count": len(disclaimers),
+                "total_sources": len(marketing_examples) + len(disclaimers)
             }
             
         except Exception as e:
@@ -194,7 +212,8 @@ class EnhancedWarrenService:
                 "disclaimers": disclaimers,
                 "search_method": "text",
                 "text_results_count": len(marketing_examples),
-                "disclaimer_count": len(disclaimers)
+                "disclaimer_count": len(disclaimers),
+                "total_sources": len(marketing_examples) + len(disclaimers)
             }
             
         except Exception as e:
