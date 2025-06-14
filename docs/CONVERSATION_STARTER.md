@@ -20,25 +20,15 @@ A SaaS platform helping financial advisors create SEC/FINRA-compliant marketing 
 - **Savings**: $120K-$250K annually per customer
 - **Market**: 117,500+ potential customers, $421M TAM
 
-## 🏗️ **Current Architecture Overview**
+## 🏗️ **Project Structure Overview**
 
-### **Backend (Complete)**
-- **FastAPI**: 20+ endpoints including full CRUD API
-- **Warren V3 AI**: Claude AI + vector search + automatic fallbacks
-- **Vector Database**: PostgreSQL + pgvector, 29 content pieces vectorized
-- **Content Management**: Complete CRUD with auto-vectorization
+**For current system status, capabilities, and latest achievements, see [`docs/CURRENT_STATE.md`](CURRENT_STATE.md)**
 
-### **Admin Portal (Complete)**  
-- **Next.js 14**: Professional admin interface with enterprise-grade UI
-- **Unified ContentModal**: Complete content management with visual change tracking
-- **Real-time Monitoring**: Live system health and performance metrics
-
-### **Advisor Portal (Phase 1 Complete - NEW!)** 🆕
-- **Split-Screen Interface**: Chat with Warren on left, content preview on right
-- **Warren AI Integration**: Working conversational interface with compliance guidance
-- **Delimiter System**: `##MARKETINGCONTENT##` parsing configured but not yet implemented
-- **Modular Prompts**: Warren prompts in dedicated `lib/prompts/warren-prompts.ts`
-- **Professional UI**: Enterprise-grade design matching admin portal
+### **High-Level Architecture**
+- **Backend**: FastAPI with Warren AI, vector search, and content management
+- **Admin Portal**: Next.js 14 enterprise-grade interface  
+- **Advisor Portal**: Next.js 14 conversational interface with Warren
+- **Infrastructure**: PostgreSQL + pgvector, Redis, Docker
 
 ## 📂 **Project Structure & Key Files**
 
@@ -46,20 +36,10 @@ A SaaS platform helping financial advisors create SEC/FINRA-compliant marketing 
 
 ```
 FiduciaMVP/
-├── src/api/endpoints.py              # 20+ API endpoints including CRUD
+├── src/api/endpoints.py              # API endpoints
 ├── src/services/                     # Warren AI, Vector Search, Content Management  
-├── frontend-admin/                   # Next.js admin portal (complete)
-├── frontend-advisor/                 # Next.js advisor portal (Phase 1 complete)
-│   ├── components/chat/              # Split-screen chat interface
-│   │   ├── ChatInterface.tsx        # Main component - NEEDS CONTENT EXTRACTION
-│   │   ├── MessageHistory.tsx       # Chat display (complete)
-│   │   ├── ChatInput.tsx           # Input interface (complete)
-│   │   └── ChatHeader.tsx          # Header component (complete)
-│   ├── lib/
-│   │   ├── prompts/warren-prompts.ts # Warren system prompts (complete)
-│   │   ├── api.ts                   # API client (complete)
-│   │   └── types.ts                 # TypeScript interfaces
-│   └── app/                         # Next.js 14 app structure
+├── frontend-admin/                   # Next.js admin portal
+├── frontend-advisor/                 # Next.js advisor portal
 ├── docs/                            # Documentation
 └── docker-compose.yml              # PostgreSQL + Redis infrastructure
 ```
@@ -87,57 +67,13 @@ cd frontend-advisor && npm run dev
 # API Docs: http://localhost:8000/docs
 ```
 
-## 🎯 **Latest Achievement: Advisor Portal Phase 1 Complete**
+## 🎯 **Development Planning**
 
-We just completed the **split-screen advisor portal with Warren chat interface**:
-- ✅ **Professional Split-Screen Layout**: Chat on left, content preview on right
-- ✅ **Warren AI Integration**: Working conversational interface with compliance guidance
-- ✅ **Delimiter System Configured**: Warren instructed to use `##MARKETINGCONTENT##` delimiters
-- ✅ **Modular Prompt System**: Warren prompts in dedicated configuration files
-- ✅ **Professional UI/UX**: Enterprise-grade design matching admin portal
+**For specific current status, achievements, and immediate next steps, review [`docs/CURRENT_STATE.md`](CURRENT_STATE.md) first.**
 
-**Current Status**: Warren responds with delimited content, but parsing logic not yet implemented
+## 📋 **Development Approach**
 
-## 🔧 **IMMEDIATE PRIORITY: Content Extraction Implementation**
-
-### **What's Working:**
-- Warren chat interface responds to user requests
-- Split-screen layout displays chat on left, empty preview on right
-- Warren uses `##MARKETINGCONTENT##` delimiters in responses (configured but not parsed)
-
-### **What Needs Implementation:**
-- Content extraction logic to parse `##MARKETINGCONTENT##` delimiters
-- Population of right panel with extracted marketing content
-- Content preview functionality with action buttons
-
-### **Ready-to-Implement Solution:**
-See `docs/advisor-portal-next-steps.md` for complete implementation guide.
-
-## 📋 **Development Options**
-
-### **Option 1: Complete Content Extraction (Recommended Priority)**
-Implement the delimiter parsing to complete the split-screen functionality:
-- Add `parseWarrenResponse()` function to extract delimited content
-- Update `sendMessageToWarren()` to parse responses and populate preview panel
-- Test end-to-end content generation and preview workflow
-
-### **Option 2: Enhance Warren Integration**
-Improve the AI conversation experience:
-- Add conversation context tracking for refinements
-- Implement content versioning during iterations
-- Add platform-specific guidance integration
-
-### **Option 3: Phase 2 Development**
-Move to next phase features:
-- File upload system for document context
-- Content management and saving functionality
-- Basic approval workflow implementation
-
-### **Option 4: Advanced Features**
-Build sophisticated capabilities:
-- Real-time collaboration features
-- Multi-channel distribution planning
-- Analytics and performance tracking
+**Specific development options and priorities should be determined after reviewing the current system status in [`docs/CURRENT_STATE.md`](CURRENT_STATE.md).**
 
 ## 💼 **Business Context**
 
@@ -161,9 +97,9 @@ Build sophisticated capabilities:
 
 Before any development session:
 - "What's your main priority for this session?"
-- "Should we focus on completing the content extraction or move to other features?"
-- "Do you want to test the current delimiter system first?"
+- "What specific features should we focus on?"
 - "How much time do you have for this development session?"
+- "Should I test the current system first to understand the state?"
 
 ### **🎯 Session Planning Requirements**
 
@@ -183,17 +119,13 @@ When we agree on a direction, create a plan covering:
 - **AI**: Claude AI (primary), OpenAI (embeddings + GPT-4o)
 - **Vector Search**: OpenAI text-embedding-3-large (1536 dimensions)
 
-### **Warren Delimiter System (Configured)**
-Warren is instructed to wrap marketing content in:
-```
-##MARKETINGCONTENT##
-[Generated marketing content here]
-##MARKETINGCONTENT##
-```
+### **Warren System Configuration**
+Warren AI system with delimiter-based content extraction and professional UI integration.
 
-**Files**: 
-- Prompts: `frontend-advisor/lib/prompts/warren-prompts.ts`
-- Main Interface: `frontend-advisor/components/chat/ChatInterface.tsx`
+**Configuration Files**: 
+- System prompts and AI behavior
+- API integration and response handling
+- Content extraction and preview functionality
 
 ### **Development Patterns Established**
 - **Component Architecture**: Mandatory decomposition practices (see development-guide.md)
@@ -202,11 +134,9 @@ Warren is instructed to wrap marketing content in:
 - **Frontend**: Professional UI with real-time integration
 - **Error Handling**: Graceful degradation and user feedback
 
-## 🎯 **Development Status**
+## 🎯 **Current System Status**
 
-**Current Achievement**: Split-screen advisor portal with Warren chat and delimiter system configured  
-**System State**: Content extraction logic ready to implement  
-**Ready For**: Delimiter parsing implementation to complete split-screen functionality  
+**For detailed current achievements, system capabilities, and development status, see [`docs/CURRENT_STATE.md`](CURRENT_STATE.md)**
 
 **Review [`docs/advisor-portal-next-steps.md`](advisor-portal-next-steps.md) for immediate implementation tasks.**
 
@@ -214,13 +144,11 @@ Warren is instructed to wrap marketing content in:
 
 ## 🚀 **Ready to Develop!**
 
-I have a sophisticated system with working Warren chat interface and split-screen layout. The delimiter system is configured and ready for content extraction implementation.
-
-**Current Priority**: Implement `##MARKETINGCONTENT##` parsing to populate the content preview panel.
-
 **Remember**: 
 1. 📖 Review the documentation first
 2. 🤔 Ask questions about my priorities  
 3. 📋 Create a plan together
 4. ✅ Get approval before coding
-5. 🛠️ Then complete the content extraction functionality!
+5. 🛠️ Then let's build something amazing!
+
+**Current system status and capabilities are detailed in [`docs/CURRENT_STATE.md`](CURRENT_STATE.md) - check there for the actual state of all features and systems.**

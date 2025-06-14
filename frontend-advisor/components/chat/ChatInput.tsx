@@ -1,6 +1,7 @@
-import React, { useState, KeyboardEvent } from 'react'
+import React, { useState, KeyboardEvent, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Send, Paperclip } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -9,15 +10,35 @@ interface ChatInputProps {
   onFileUpload?: (files: FileList) => void
   disabled?: boolean
   placeholder?: string
+  standalone?: boolean // New prop for centered layout
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
   onFileUpload,
   disabled = false,
-  placeholder = "Ask Warren to create compliant content..."
+  placeholder = "Ask Warren to create compliant content...",
+  standalone = false
 }) => {
   const [message, setMessage] = useState('')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Auto-resize textarea as content changes
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current
+    if (textarea) {
+      textarea.style.height = 'auto'
+      const scrollHeight = textarea.scrollHeight
+      // Limit max height to about 6 lines (120px)
+      const maxHeight = standalone ? 120 : 100
+      const minHeight = standalone ? 48 : 40
+      textarea.style.height = Math.max(minHeight, Math.min(scrollHeight, maxHeight)) + 'px'
+    }
+  }
+
+  useEffect(() => {
+    adjustTextareaHeight()
+  }, [message])
 
   const handleSend = () => {
     if (message.trim() && !disabled) {
@@ -26,11 +47,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   }
 
-  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyPress = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
     }
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value)
   }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,52 +65,64 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   }
 
   return (
-    <div className="border-t bg-background p-3">
-      <div className="flex items-end gap-2 max-w-full">
-        {/* File upload button */}
-        <div className="relative">
-          <input
-            type="file"
-            id="file-upload"
-            className="hidden"
-            multiple
-            accept=".txt,.pdf,.docx,.md"
-            onChange={handleFileUpload}
-            disabled={disabled}
-          />
-          <Button
-            variant="outline"
-            size="icon"
-            className="shrink-0"
-            onClick={() => document.getElementById('file-upload')?.click()}
-            disabled={disabled}
-            title="Upload documents for context"
-          >
-            <Paperclip className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Message input */}
-        <div className="flex-1 relative">
-          <Input
+    <div className={cn(
+      "bg-background p-4",
+      !standalone && "border-t"
+    )}>
+      <div className="max-w-full space-y-3">
+        {/* Message input - Full width at top */}
+        <div className="w-full">
+          <Textarea
+            ref={textareaRef}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={handleChange}
             onKeyPress={handleKeyPress}
             placeholder={placeholder}
             disabled={disabled}
-            className="pr-12 min-h-[40px] resize-none"
+            className={cn(
+              "resize-none overflow-hidden w-full",
+              standalone ? "min-h-[48px] text-base border-input" : "min-h-[40px]",
+              "leading-relaxed"
+            )}
+            rows={1}
           />
         </div>
 
-        {/* Send button */}
-        <Button
-          onClick={handleSend}
-          disabled={disabled || !message.trim()}
-          size="icon"
-          className="shrink-0"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
+        {/* Button row - File upload left, Send button right */}
+        <div className="flex items-center justify-between">
+          {/* File upload button - Bottom left */}
+          <div className="relative">
+            <input
+              type="file"
+              id="file-upload"
+              className="hidden"
+              multiple
+              accept=".txt,.pdf,.docx,.md"
+              onChange={handleFileUpload}
+              disabled={disabled}
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              onClick={() => document.getElementById('file-upload')?.click()}
+              disabled={disabled}
+              title="Upload documents for context"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Send button - Bottom right */}
+          <Button
+            onClick={handleSend}
+            disabled={disabled || !message.trim()}
+            size="icon"
+            className="shrink-0"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   )
