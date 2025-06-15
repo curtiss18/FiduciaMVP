@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config.settings import settings
 from src.api.endpoints import router
+from src.api.advisor_workflow_endpoints import advisor_router
 import logging
 
 # Configure logging
@@ -27,6 +28,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(router, prefix=settings.api_v1_str)
+app.include_router(advisor_router, prefix=settings.api_v1_str)  # NEW: Advisor workflow endpoints
 
 # Root endpoint
 @app.get("/")
