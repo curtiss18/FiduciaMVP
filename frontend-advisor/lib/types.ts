@@ -114,3 +114,47 @@ export interface ApiResponse<T = any> {
   error?: string
   message?: string
 }
+
+// Advisor Workflow Types - matching backend API responses
+export interface AdvisorSession {
+  session_id: string
+  advisor_id: string
+  title: string
+  created_at: string
+  updated_at: string
+  message_count?: number
+}
+
+export interface AdvisorMessage {
+  id: string
+  session_id: string
+  message_type: 'user' | 'warren'
+  content: string
+  metadata?: any
+  created_at: string
+}
+
+export interface AdvisorContent {
+  id: string
+  advisor_id: string
+  title: string
+  content_text: string
+  content_type: string
+  audience_type: string
+  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'distributed'
+  source_session_id?: string
+  source_message_id?: string
+  advisor_notes?: string
+  intended_channels: string[]
+  source_metadata?: any
+  created_at: string
+  updated_at: string
+}
+
+export interface AdvisorStatistics {
+  total_content: number
+  total_sessions: number
+  content_by_status: Record<string, number>
+  content_by_type: Record<string, number>
+  recent_activity_count: number
+}

@@ -15,8 +15,39 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  User
+  User,
+  Sun,
+  Moon,
+  Monitor
 } from 'lucide-react'
+
+// Client-only wrapper to prevent hydration issues
+function ClientOnlyThemeToggle() {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <div className="w-8 h-8 rounded-md border border-input bg-background flex items-center justify-center">
+        <Sun className="h-4 w-4" />
+      </div>
+    )
+  }
+
+  return (
+    <ThemeToggle
+      ButtonComponent={Button}
+      icons={{
+        Sun: Sun,
+        Moon: Moon,
+        Monitor: Monitor
+      }}
+    />
+  )
+}
 
 export interface NavigationItem {
   id: string
@@ -206,14 +237,7 @@ export const AdvisorSidebar: React.FC<AdvisorSidebarProps> = ({ className }) => 
           "flex items-center gap-3",
           !isExpanded && !isMobile && "justify-center"
         )}>
-          <ThemeToggle 
-            ButtonComponent={Button}
-            icons={{
-              Sun: () => <span>☀️</span>,
-              Moon: () => <span>🌙</span>,
-              Monitor: () => <span>💻</span>
-            }}
-          />
+          <ClientOnlyThemeToggle />
           {(isExpanded || isMobile) && (
             <span className="text-sm text-muted-foreground">Theme</span>
           )}

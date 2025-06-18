@@ -70,4 +70,86 @@ export const systemApi = {
   getStatus: () => api.get('/status'),
 };
 
+// Advisor Workflow API - Complete session and content management
+export const advisorApi = {
+  // Session Management
+  createSession: async (advisorId: string, title?: string) => {
+    const response = await api.post('/advisor/sessions/create', {
+      advisor_id: advisorId,
+      title: title || 'Warren Chat Session'
+    });
+    return response.data;
+  },
+
+  saveMessage: async (sessionId: string, messageType: 'user' | 'warren', content: string, metadata?: any) => {
+    const response = await api.post('/advisor/sessions/messages/save', {
+      session_id: sessionId,
+      message_type: messageType,
+      content,
+      metadata
+    });
+    return response.data;
+  },
+
+  getSessionMessages: async (sessionId: string, advisorId: string) => {
+    const response = await api.get(`/advisor/sessions/${sessionId}/messages`, {
+      params: { advisor_id: advisorId }
+    });
+    return response.data;
+  },
+
+  // Content Management
+  saveContent: async (contentData: {
+    advisorId: string;
+    title: string;
+    contentText: string;
+    contentType: string;
+    audienceType: string;
+    sourceSessionId?: string;
+    sourceMessageId?: string;
+    advisorNotes?: string;
+    intendedChannels?: string[];
+    sourceMetadata?: any;
+  }) => {
+    const response = await api.post('/advisor/content/save', {
+      advisor_id: contentData.advisorId,
+      title: contentData.title,
+      content_text: contentData.contentText,
+      content_type: contentData.contentType,
+      audience_type: contentData.audienceType,
+      source_session_id: contentData.sourceSessionId,
+      source_message_id: contentData.sourceMessageId,
+      advisor_notes: contentData.advisorNotes,
+      intended_channels: contentData.intendedChannels || [],
+      source_metadata: contentData.sourceMetadata
+    });
+    return response.data;
+  },
+
+  getContentLibrary: async (advisorId: string, filters?: any) => {
+    const response = await api.get('/advisor/content/library', {
+      params: { advisor_id: advisorId, ...filters }
+    });
+    return response.data;
+  },
+
+  updateContentStatus: async (contentId: string, advisorId: string, newStatus: string, notes?: string) => {
+    const response = await api.put(`/advisor/content/${contentId}/status`, {
+      new_status: newStatus,
+      advisor_notes: notes
+    }, {
+      params: { advisor_id: advisorId }
+    });
+    return response.data;
+  },
+
+  // Analytics
+  getStatistics: async (advisorId: string) => {
+    const response = await api.get('/advisor/content/statistics', {
+      params: { advisor_id: advisorId }
+    });
+    return response.data;
+  }
+};
+
 export default api;

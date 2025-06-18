@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react'
 import { Message, Conversation, GeneratedContent, WarrenResponse, ExtractedContent, SourceInformation } from '@/lib/types'
-import { warrenChatApi } from '@/lib/api'
+import { warrenChatApi, advisorApi } from '@/lib/api'
 import { PageHeader } from '@/components/layout'
 import { MessageHistory } from './MessageHistory'
 import { ChatInput } from './ChatInput'
@@ -20,6 +20,14 @@ export const ChatInterface: React.FC = () => {
   
   const [isLoading, setIsLoading] = useState(false)
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null)
+  
+  // Session management for API integration
+  const [advisorSession, setAdvisorSession] = useState<string | null>(null)
+  const advisorId = 'demo_advisor_001'
+  
+  // Edit context for loading existing content
+  const [editContext, setEditContext] = useState<any>(null)
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   
   // Resize state for dynamic panel widths
   const [chatWidth, setChatWidth] = useState(30) // Default: 30% chat, 70% content
@@ -259,22 +267,61 @@ export const ChatInterface: React.FC = () => {
     }
   }
 
-  const handleSaveContent = () => {
+  const handleSaveContent = async () => {
     if (generatedContent) {
-      // Save to localStorage for now (Phase 3 will add database persistence)
-      const savedContent = JSON.parse(localStorage.getItem('warrenSavedContent') || '[]')
-      savedContent.push({
-        ...generatedContent,
-        savedAt: new Date().toISOString(),
-        conversationId: conversation.id
-      })
-      localStorage.setItem('warrenSavedContent', JSON.stringify(savedContent))
-      
-      addMessage({
-        role: 'warren',
-        content: '✅ Content saved! You can access your saved content from the library.',
-        type: 'text'
-      })
+      try {
+        // Ensure we have a session ID
+        let sessionId: string = advisorSession || ''
+        if (!sessionId) {
+          const sessionResponse = await advisorApi.createSession(advisorId, 'Warren Chat Session')
+          sessionId = sessionResponse.session.session_id
+          setAdvisorSession(sessionId)
+        }
+
+        // Map content type to valid backend values
+        const mapContentType = (type: string) => {
+          const typeMap: Record<string, string> = {
+            'general': 'linkedin_post',
+            'social_media': 'linkedin_post',
+            'linkedin': 'linkedin_post',
+            'twitter': 'social_media',
+            'email': 'email_template',
+            'website': 'website_content',
+            'newsletter': 'newsletter',
+            'blog': 'blog_post'
+          }
+          return typeMap[type.toLowerCase()] || 'linkedin_post'
+        }
+
+        // Save content to database via API
+        const contentData = {
+          advisorId,
+          title: generatedContent.title || 'Generated Content',
+          contentText: generatedContent.content,
+          contentType: mapContentType(generatedContent.contentType),
+          audienceType: generatedContent.audience || 'general_education',
+          sourceSessionId: sessionId, // Now guaranteed to be string
+          advisorNotes: 'Generated via Warren chat',
+          intendedChannels: [generatedContent.platform.toLowerCase()],
+          sourceMetadata: generatedContent.sourceInfo
+        }
+
+        console.log('Saving content with data:', contentData)
+        const saveResponse = await advisorApi.saveContent(contentData)
+        
+        addMessage({
+          role: 'warren',
+          content: `✅ Content saved to your library! (ID: ${saveResponse.content.id})\n\nYou can access your saved content from the Library page.`,
+          type: 'text'
+        })
+      } catch (error) {
+        console.error('Failed to save content:', error)
+        addMessage({
+          role: 'warren',
+          content: '❌ Failed to save content to library. Please try again.',
+          type: 'error'
+        })
+      }
     }
   }
 
@@ -339,6 +386,74 @@ export const ChatInterface: React.FC = () => {
     if (savedWidth) {
       setChatWidth(Number(savedWidth))
     }
+  }, [])
+
+  // Check for edit context and load chat history on mount
+  React.useEffect(() => {
+    const loadEditContext = async () => {
+      const editContextData = sessionStorage.getItem('warrenEditContext')
+      if (editContextData) {
+        try {
+          const context = JSON.parse(editContextData)
+          setEditContext(context)
+          
+          // Clear the context from sessionStorage
+          sessionStorage.removeItem('warrenEditContext')
+          
+          // Set the advisor session
+          if (context.sessionId) {
+            setAdvisorSession(context.sessionId)
+            setIsLoadingHistory(true)
+            
+            // Load chat history
+            const historyResponse = await advisorApi.getSessionMessages(context.sessionId, advisorId)
+            const messages = historyResponse.messages || []
+            
+            // Convert database messages to UI format
+            const uiMessages = messages.map((msg: any) => ({
+              id: msg.id,
+              role: msg.message_type === 'user' ? 'advisor' : 'warren',
+              content: msg.content,
+              timestamp: new Date(msg.created_at),
+              type: 'text',
+              metadata: msg.metadata
+            }))
+            
+            // Update conversation with loaded messages
+            setConversation(prev => ({
+              ...prev,
+              id: context.sessionId,
+              messages: uiMessages
+            }))
+            
+            // Set the generated content for preview
+            const generatedContent: GeneratedContent = {
+              title: context.title,
+              content: context.content,
+              contentType: context.contentType,
+              audience: context.audienceType,
+              platform: context.platform,
+              sourceInfo: context.sourceMetadata
+            }
+            
+            setGeneratedContent(generatedContent)
+            setIsLoadingHistory(false)
+            
+            // Add a Warren message indicating the content was loaded
+            addMessage({
+              role: 'warren',
+              content: `✅ Content loaded! I've restored our previous conversation and your draft content. You can continue editing or ask me to make changes.`,
+              type: 'text'
+            })
+          }
+        } catch (error) {
+          console.error('Failed to load edit context:', error)
+          setIsLoadingHistory(false)
+        }
+      }
+    }
+    
+    loadEditContext()
   }, [])
 
   // Scroll to bottom when content preview opens
@@ -409,8 +524,8 @@ export const ChatInterface: React.FC = () => {
                       <ChatInput
                         onSendMessage={sendMessageToWarren}
                         onFileUpload={handleFileUpload}
-                        disabled={isLoading}
-                        placeholder="Tell Warren what content you'd like to create..."
+                        disabled={isLoading || isLoadingHistory}
+                        placeholder={isLoadingHistory ? "Loading chat history..." : "Tell Warren what content you'd like to create..."}
                         standalone={true}
                       />
                     </div>
@@ -435,8 +550,8 @@ export const ChatInterface: React.FC = () => {
                 <ChatInput
                   onSendMessage={sendMessageToWarren}
                   onFileUpload={handleFileUpload}
-                  disabled={isLoading}
-                  placeholder="Continue your conversation with Warren..."
+                  disabled={isLoading || isLoadingHistory}
+                  placeholder={isLoadingHistory ? "Loading chat history..." : "Continue your conversation with Warren..."}
                   standalone={!generatedContent}
                 />
               </div>
