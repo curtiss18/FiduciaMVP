@@ -1,11 +1,22 @@
 'use client'
 
-import { ChatInterface } from '@/components/chat/ChatInterface'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function HomePage() {
+  const router = useRouter()
+
+  useEffect(() => {
+    // Redirect to chat page as the default
+    router.replace('/chat')
+  }, [router])
+
   return (
-    <main className="h-screen">
-      <ChatInterface />
-    </main>
+    <div className="h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        <p className="mt-2 text-muted-foreground">Loading Warren...</p>
+      </div>
+    </div>
   )
 }

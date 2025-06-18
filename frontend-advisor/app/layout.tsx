@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from '../../shared-ui/components/theme'
+import { AdvisorSidebar } from '@/components/navigation'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -26,8 +27,11 @@ export default function RootLayout({
           defaultTheme="system"
           storageKey="fiducia-advisor-theme"
         >
-          <div className="relative flex min-h-screen flex-col">
-            <div className="flex-1">{children}</div>
+          <div className="flex min-h-screen">
+            <AdvisorSidebar />
+            <main className="flex-1 overflow-hidden">
+              {children}
+            </main>
           </div>
         </ThemeProvider>
       </body>

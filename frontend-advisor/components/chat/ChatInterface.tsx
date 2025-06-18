@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { Message, Conversation, GeneratedContent, WarrenResponse, ExtractedContent, SourceInformation } from '@/lib/types'
 import { warrenChatApi } from '@/lib/api'
-import { ChatHeader } from './ChatHeader'
+import { PageHeader } from '@/components/layout'
 import { MessageHistory } from './MessageHistory'
 import { ChatInput } from './ChatInput'
 import { SourceInfoBadges } from '@/components/content'
@@ -368,10 +368,10 @@ export const ChatInterface: React.FC = () => {
   }, [isResizing, handleMouseMove, handleMouseUp])
 
   return (
-    <div className="h-screen flex flex-col">
-      <ChatHeader 
-        onRefresh={handleRefresh}
-        advisorName="Demo Advisor"
+    <div className="h-full flex flex-col">
+      <PageHeader 
+        title="Warren AI"
+        subtitle="Compliance-focused content assistant"
       />
       
       {/* Main Content Area - Dynamic Layout with Resizer */}
@@ -387,10 +387,10 @@ export const ChatInterface: React.FC = () => {
           {conversation.messages.length === 0 && !generatedContent ? (
             /* Centered welcome layout for first-time users */
             <div className="flex flex-col h-full max-w-4xl w-full mx-auto px-6">
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex justify-center pt-16">
                 <div className="text-center max-w-2xl w-full">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span className="text-3xl">🛡️</span>
+                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span className="text-2xl">🛡️</span>
                   </div>
                   <h2 className="text-2xl font-semibold mb-3">
                     Hi! I'm Warren

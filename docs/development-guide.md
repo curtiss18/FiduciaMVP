@@ -13,7 +13,7 @@
 1. **Clone and Environment Setup**
    ```bash
    git clone <repository-url>
-   cd FiduciaMVP
+   cd onedrive/desktop/webdev/FiduciaMVP
    python -m venv venv
    source venv/bin/activate  # Windows: .\venv\Scripts\activate
    pip install -r requirements.txt

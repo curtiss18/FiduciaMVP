@@ -63,6 +63,19 @@ body {
 
 /* Portal-specific Styles */
 @layer components {
+  /* Navigation styles for advisor portal */
+  .advisor-sidebar {
+    transition: width 0.3s ease-in-out, transform 0.3s ease-in-out;
+  }
+
+  .advisor-sidebar-expanded {
+    width: 16rem; /* 64 * 0.25rem = 16rem = 256px */
+  }
+
+  .advisor-sidebar-collapsed {
+    width: 4rem; /* 16 * 0.25rem = 4rem = 64px */
+  }
+
   /* Chat-specific styles for advisor portal */
   .chat-container {
     height: 100vh;
