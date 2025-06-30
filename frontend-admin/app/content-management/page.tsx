@@ -19,7 +19,7 @@ import ContentTable from '@/components/content/ContentTable'
 import Pagination from '@/components/content/Pagination'
 import ContentModal from '@/components/content/ContentModal'
 import DeleteContentModal from '@/components/content/DeleteContentModal'
-import { ThemeToggle } from '@/components/theme'
+import { ThemeToggle } from '@/shared-ui/components/theme'
 
 export default function ContentManagement() {
   const [content, setContent] = useState<ContentItem[]>([])
@@ -66,11 +66,14 @@ export default function ContentManagement() {
     fetchContentData()
   }
 
-  const filteredContent = content.filter(item =>
-    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.content_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.tags.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredContent = content.filter(item => {
+    const tagsString = Array.isArray(item.tags) ? item.tags.join(' ') : (item.tags || '')
+    return (
+      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.content_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tagsString.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  })
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredContent.length / pageSize)

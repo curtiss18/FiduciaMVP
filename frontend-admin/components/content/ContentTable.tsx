@@ -157,7 +157,7 @@ export default function ContentTable({ content, isLoading, onEdit, onRefresh }: 
                 </Badge>
               </td>
               <td className="py-4 px-4">
-                {item.is_vectorized ? (
+                {item.has_embedding ? (
                   <CheckCircle className="w-5 h-5 text-green-500 dark:text-green-400" />
                 ) : (
                   <AlertCircle className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />

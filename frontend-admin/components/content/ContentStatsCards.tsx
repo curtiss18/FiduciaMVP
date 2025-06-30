@@ -10,13 +10,11 @@ import {
 
 interface ContentStats {
   total_content: number
-  by_type: Record<string, number>
-  by_status: Record<string, number>
-  vectorization_stats: {
-    vectorized: number
-    total: number
-    percentage: number
-  }
+  vectorized_content: number
+  vectorization_percentage: number
+  content_by_type: Record<string, number>
+  content_by_source: Record<string, number>
+  content_by_approval: Record<string, number>
 }
 
 interface ContentStatsCardsProps {
@@ -49,10 +47,10 @@ export default function ContentStatsCards({ stats, contentLength }: ContentStats
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold text-foreground">
-            {stats?.vectorization_stats?.vectorized || 0}
+            {stats?.vectorized_content || 0}
           </div>
           <p className="text-muted-foreground text-sm">
-            {stats?.vectorization_stats?.percentage || 0}% coverage
+            {stats?.vectorization_percentage || 0}% coverage
           </p>
         </CardContent>
       </Card>
@@ -66,7 +64,7 @@ export default function ContentStatsCards({ stats, contentLength }: ContentStats
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold text-foreground">
-            {stats?.by_status?.approved || 0}
+            {stats?.content_by_approval?.approved || 0}
           </div>
           <p className="text-muted-foreground text-sm">Ready to use</p>
         </CardContent>
@@ -81,7 +79,7 @@ export default function ContentStatsCards({ stats, contentLength }: ContentStats
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold text-foreground">
-            {stats?.by_status?.pending || 0}
+            {stats?.content_by_approval?.pending || 0}
           </div>
           <p className="text-muted-foreground text-sm">Awaiting review</p>
         </CardContent>
