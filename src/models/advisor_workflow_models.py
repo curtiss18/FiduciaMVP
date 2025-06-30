@@ -85,8 +85,8 @@ class AdvisorContent(Base):
     # Content basics
     title = Column(String(255), nullable=False)
     content_text = Column(Text, nullable=False)
-    content_type = Column(Enum(ContentType), nullable=False, index=True)
-    audience_type = Column(Enum(AudienceType), nullable=False)
+    content_type = Column(String(50), nullable=False, index=True)  # PostgreSQL enum: contenttype
+    audience_type = Column(String(50), nullable=False)  # PostgreSQL enum: audiencetype
     intended_channels = Column(Text, nullable=True)  # JSON: ["linkedin", "email"]
     
     # Ownership
@@ -98,7 +98,7 @@ class AdvisorContent(Base):
     source_message_id = Column(Integer, ForeignKey('advisor_messages.id'), nullable=True)
     
     # Advisor workflow
-    status = Column(Enum(ContentStatus), default=ContentStatus.DRAFT, index=True)
+    status = Column(String(30), default="draft", index=True)  # PostgreSQL enum: contentstatus
     advisor_notes = Column(Text, nullable=True)
     
     # Compliance workflow

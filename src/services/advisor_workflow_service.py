@@ -14,7 +14,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_, update, desc
+from sqlalchemy import select, func, and_, or_, update, desc, text
 from sqlalchemy.orm import selectinload
 
 from src.models.advisor_workflow_models import (
@@ -212,40 +212,78 @@ class AdvisorWorkflowService:
         """Save content piece to advisor's library."""
         async with AsyncSessionLocal() as db:
             try:
-                # Convert string enums to enum objects
-                content_type_enum = ContentType(content_type.lower())
-                audience_type_enum = AudienceType(audience_type.lower())
+                # Force string values and ensure lowercase
+                content_type_str = str(content_type).lower() if content_type else "linkedin_post"
+                audience_type_str = str(audience_type).lower() if audience_type else "general_education"
+                status_str = "draft"
                 
-                # Create content
+                # Force string values and ensure lowercase
+                content_type_str = str(content_type).lower() if content_type else "linkedin_post"
+                audience_type_str = str(audience_type).lower() if audience_type else "general_education"
+                status_str = "draft"
+                
+                # Create content with explicit string casting
                 content = AdvisorContent(
                     advisor_id=advisor_id,
                     title=title,
                     content_text=content_text,
-                    content_type=content_type_enum,
-                    audience_type=audience_type_enum,
+                    content_type=content_type_str,
+                    audience_type=audience_type_str,
                     source_session_id=source_session_id,
                     source_message_id=source_message_id,
                     advisor_notes=advisor_notes,
                     intended_channels=json.dumps(intended_channels) if intended_channels else None,
-                    status=ContentStatus.DRAFT
+                    status=status_str
                 )
                 
-                db.add(content)
-                await db.commit()
-                await db.refresh(content)
+                # Create content using SQLAlchemy with explicit enum casting
+                from sqlalchemy import cast, Enum as SQLEnum
                 
-                logger.info(f"Saved advisor content: {content.id} for advisor {advisor_id}")
+                # Use raw SQL insert with proper enum casting
+                query = text("""
+                    INSERT INTO advisor_content 
+                    (advisor_id, title, content_text, content_type, audience_type, 
+                     source_session_id, source_message_id, advisor_notes, 
+                     intended_channels, status, created_at, updated_at)
+                    VALUES 
+                    (:advisor_id, :title, :content_text, CAST(:content_type AS contenttype), 
+                     CAST(:audience_type AS audiencetype), :source_session_id, :source_message_id, 
+                     :advisor_notes, :intended_channels, CAST(:status AS contentstatus), NOW(), NOW())
+                    RETURNING id, created_at, updated_at
+                """)
+                
+                result = await db.execute(query, {
+                    'advisor_id': advisor_id,
+                    'title': title,
+                    'content_text': content_text,
+                    'content_type': content_type_str,
+                    'audience_type': audience_type_str,
+                    'source_session_id': source_session_id,
+                    'source_message_id': source_message_id,
+                    'advisor_notes': advisor_notes,
+                    'intended_channels': json.dumps(intended_channels) if intended_channels else None,
+                    'status': status_str
+                })
+                
+                row = result.fetchone()
+                content_id = row[0]
+                created_at = row[1]
+                updated_at = row[2]
+                
+                await db.commit()
+                
+                logger.info(f"Saved advisor content: {content_id} for advisor {advisor_id}")
                 
                 return {
                     "status": "success",
                     "content": {
-                        "id": content.id,
-                        "title": content.title,
-                        "content_type": content.content_type.value,
-                        "audience_type": content.audience_type.value,
-                        "status": content.status.value,
-                        "created_at": content.created_at.isoformat(),
-                        "source_session_id": content.source_session_id
+                        "id": content_id,
+                        "title": title,
+                        "content_type": content_type_str,
+                        "audience_type": audience_type_str,
+                        "status": status_str,
+                        "created_at": created_at.isoformat(),
+                        "source_session_id": source_session_id
                     }
                 }
                 
@@ -305,9 +343,9 @@ class AdvisorWorkflowService:
                             "id": item.id,
                             "title": item.title,
                             "content_text": item.content_text,
-                            "content_type": item.content_type.value,
-                            "audience_type": item.audience_type.value,
-                            "status": item.status.value,
+                            "content_type": item.content_type,
+                            "audience_type": item.audience_type,
+                            "status": item.status,
                             "advisor_notes": item.advisor_notes,
                             "intended_channels": json.loads(item.intended_channels) if item.intended_channels else None,
                             "source_session_id": item.source_session_id,
@@ -348,11 +386,11 @@ class AdvisorWorkflowService:
                 if not content:
                     return {"status": "error", "error": "Content not found or access denied"}
                 
-                # Update status
-                new_status_enum = ContentStatus(new_status.lower())
+                # Update status with string value (database handles enum casting)
+                new_status_str = new_status.lower()
                 
                 update_data = {
-                    "status": new_status_enum,
+                    "status": new_status_str,
                     "updated_at": func.now()
                 }
                 
@@ -360,14 +398,48 @@ class AdvisorWorkflowService:
                     update_data["advisor_notes"] = advisor_notes
                 
                 # Set submission timestamp if submitting for review
-                if new_status_enum == ContentStatus.SUBMITTED:
-                    update_data["submitted_for_review_at"] = func.now()
+                if new_status_str == "submitted":
+                    update_data["submitted_for_review_at"] = datetime.now()
                 
-                await db.execute(
-                    update(AdvisorContent)
-                    .where(AdvisorContent.id == content_id)
-                    .values(**update_data)
-                )
+                # Use raw SQL for update with enum casting
+                if advisor_notes and new_status_str == "submitted":
+                    query = text("""
+                        UPDATE advisor_content 
+                        SET status = CAST(:status AS contentstatus),
+                            advisor_notes = :advisor_notes,
+                            submitted_for_review_at = NOW(),
+                            updated_at = NOW()
+                        WHERE id = :content_id
+                    """)
+                    await db.execute(query, {
+                        "status": new_status_str,
+                        "advisor_notes": advisor_notes,
+                        "content_id": content_id
+                    })
+                elif advisor_notes:
+                    query = text("""
+                        UPDATE advisor_content 
+                        SET status = CAST(:status AS contentstatus),
+                            advisor_notes = :advisor_notes,
+                            updated_at = NOW()
+                        WHERE id = :content_id
+                    """)
+                    await db.execute(query, {
+                        "status": new_status_str,
+                        "advisor_notes": advisor_notes,
+                        "content_id": content_id
+                    })
+                else:
+                    query = text("""
+                        UPDATE advisor_content 
+                        SET status = CAST(:status AS contentstatus),
+                            updated_at = NOW()
+                        WHERE id = :content_id
+                    """)
+                    await db.execute(query, {
+                        "status": new_status_str,
+                        "content_id": content_id
+                    })
                 
                 await db.commit()
                 
@@ -390,16 +462,19 @@ class AdvisorWorkflowService:
         """Get advisor's content statistics."""
         async with AsyncSessionLocal() as db:
             try:
-                # Count by status
+                # Count by status using raw SQL with proper enum casting
                 status_counts = {}
                 for status in ContentStatus:
-                    result = await db.execute(
-                        select(func.count(AdvisorContent.id))
-                        .where(and_(
-                            AdvisorContent.advisor_id == advisor_id,
-                            AdvisorContent.status == status
-                        ))
-                    )
+                    query = text("""
+                        SELECT COUNT(id) 
+                        FROM advisor_content 
+                        WHERE advisor_id = :advisor_id 
+                        AND status = CAST(:status AS contentstatus)
+                    """)
+                    result = await db.execute(query, {
+                        "advisor_id": advisor_id,
+                        "status": status.value
+                    })
                     status_counts[status.value] = result.scalar()
                 
                 # Total content count
