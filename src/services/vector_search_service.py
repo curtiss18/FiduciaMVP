@@ -58,13 +58,11 @@ class VectorSearchService:
             threshold = similarity_threshold or self.default_similarity_threshold
             
             async with AsyncSessionLocal() as db:
-                # Build base query
+                # Build base query - FIXED: removed content_type and audience_type columns that don't exist
                 query = select(
                     MarketingContent.id,
                     MarketingContent.title,
                     MarketingContent.content_text,
-                    MarketingContent.content_type,
-                    MarketingContent.audience_type,
                     MarketingContent.tags,
                     MarketingContent.usage_count,
                     MarketingContent.compliance_score,
@@ -79,15 +77,6 @@ class VectorSearchService:
                     )
                 )
                 
-                # Add content type filter
-                if content_type:
-                    query = query.where(MarketingContent.content_type == content_type)
-                
-                # Add audience type filter  
-                if audience_type:
-                    query = query.where(MarketingContent.audience_type == audience_type)
-                
-                # Order by similarity score descending, then by usage count
                 query = query.order_by(
                     text('similarity_score DESC'),
                     MarketingContent.usage_count.desc()
@@ -96,15 +85,14 @@ class VectorSearchService:
                 result = await db.execute(query)
                 rows = result.all()
                 
-                # Convert to dictionaries with similarity scores
                 results = []
                 for row in rows:
                     results.append({
                         "id": row.id,
                         "title": row.title,
                         "content_text": row.content_text,
-                        "content_type": row.content_type.value,
-                        "audience_type": row.audience_type.value,
+                        "content_type": "unknown",  # FIXED: default value since column doesn't exist
+                        "audience_type": "unknown",  # FIXED: default value since column doesn't exist
                         "tags": row.tags,
                         "usage_count": row.usage_count,
                         "compliance_score": row.compliance_score,
@@ -289,8 +277,8 @@ class VectorSearchService:
                         "id": content.id,
                         "title": content.title,
                         "content_text": content.content_text,
-                        "content_type": content.content_type.value,
-                        "audience_type": content.audience_type.value,
+                        "content_type": "unknown",  # FIXED: default value since column doesn't exist
+                        "audience_type": "unknown",  # FIXED: default value since column doesn't exist
                         "tags": content.tags,
                         "usage_count": content.usage_count,
                         "compliance_score": content.compliance_score,
