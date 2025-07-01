@@ -21,8 +21,12 @@ export const ChatInterface: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null)
   
-  // Session management for API integration
+  // Enhanced session management for API integration
   const [advisorSession, setAdvisorSession] = useState<string | null>(null)
+  const [sessionContentId, setSessionContentId] = useState<string | null>(null) // Content ID for session in library
+  const [sessionTitle, setSessionTitle] = useState<string>('') // Smart title for session
+  const [isSessionSaved, setIsSessionSaved] = useState(false) // Track if session is persisted
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false) // Track unsaved content
   const advisorId = 'demo_advisor_001'
   
   // Edit context for loading existing content
@@ -35,6 +39,157 @@ export const ChatInterface: React.FC = () => {
 
   // Generate unique message ID
   const generateMessageId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  // Session management functions
+  const ensureSession = async (): Promise<string> => {
+    if (advisorSession) return advisorSession
+
+    try {
+      // Create new session
+      const sessionResponse = await advisorApi.createSession(
+        advisorId, 
+        sessionTitle || `Warren Chat - ${new Date().toLocaleDateString()}`
+      )
+      const newSessionId = sessionResponse.session.session_id
+      setAdvisorSession(newSessionId)
+      setHasUnsavedChanges(true) // Mark as having unsaved changes
+      console.log('Created new session:', newSessionId)
+      return newSessionId
+    } catch (error) {
+      console.error('Failed to create session:', error)
+      // Graceful degradation - continue with local session
+      const localSessionId = `local_${Date.now()}`
+      setAdvisorSession(localSessionId)
+      return localSessionId
+    }
+  }
+
+  // Persist message to database
+  const persistMessage = async (
+    sessionId: string,
+    messageType: 'user' | 'warren',
+    content: string,
+    metadata?: any
+  ) => {
+    try {
+      await advisorApi.saveMessage(sessionId, messageType, content, metadata)
+      console.log(`Persisted ${messageType} message to session ${sessionId}`)
+    } catch (error) {
+      console.warn('Message persistence failed (graceful degradation):', error)
+      // Continue without breaking chat experience
+      setHasUnsavedChanges(true) // Mark as having unsaved changes
+    }
+  }
+
+  // Generate smart session title from Warren's first response
+  const generateSessionTitle = (warrenResponse: string, userMessage: string): string => {
+    // Try to extract meaningful title from Warren's response or user message
+    const responseLines = warrenResponse.split('\n').filter(line => line.trim())
+    const userWords = userMessage.toLowerCase()
+    
+    // Look for content type keywords
+    if (userWords.includes('linkedin')) return 'LinkedIn Content Session'
+    if (userWords.includes('email')) return 'Email Content Session'
+    if (userWords.includes('website')) return 'Website Content Session'
+    if (userWords.includes('retirement')) return 'Retirement Planning Content'
+    if (userWords.includes('investment')) return 'Investment Content Session'
+    if (userWords.includes('financial planning')) return 'Financial Planning Content'
+    
+    // Extract first meaningful line from Warren's response
+    const meaningfulLine = responseLines.find(line => 
+      line.length > 10 && 
+      !line.startsWith('I') && 
+      !line.includes('Warren') &&
+      !line.includes('compliance')
+    )
+    
+    if (meaningfulLine && meaningfulLine.length < 50) {
+      return meaningfulLine.trim()
+    }
+    
+    // Fallback to date-based title
+    return `Warren Chat - ${new Date().toLocaleDateString()}`
+  }
+
+  // Save session as content in library
+  const saveSessionToLibrary = async () => {
+    if (!advisorSession) return
+
+    try {
+      // Clean up messages before saving - remove delimited content from Warren messages
+      const cleanMessages = conversation.messages.map(msg => {
+        if (msg.role === 'warren' && msg.content.includes('##MARKETINGCONTENT##')) {
+          // Extract only the conversational part for storage
+          const extractedContent = parseWarrenResponse(msg.content)
+          return {
+            ...msg,
+            content: extractedContent.conversationalResponse
+          }
+        }
+        return msg
+      })
+
+      const sessionData = {
+        title: sessionTitle,
+        messages: cleanMessages, // Use cleaned messages
+        generatedContent,
+        createdAt: new Date().toISOString()
+      }
+
+      const contentData = {
+        advisorId,
+        title: sessionTitle,
+        contentText: JSON.stringify(sessionData), // Store session data as JSON
+        contentType: 'website_blog', // Use valid backend value - lowercase for advisor_content table
+        audienceType: 'general_education', // Use valid backend value - lowercase
+        sourceSessionId: advisorSession,
+        advisorNotes: `Warren chat session with ${conversation.messages.length} messages - Session Data`,
+        intendedChannels: ['warren_chat'],
+        sourceMetadata: {
+          sessionId: advisorSession,
+          messageCount: conversation.messages.length,
+          hasGeneratedContent: !!generatedContent,
+          lastActivity: new Date().toISOString(),
+          isWarrenSession: true // Flag to identify this as a session
+        }
+      }
+
+      let saveResponse
+
+      if (sessionContentId) {
+        // Update existing session using the proper update endpoint
+        console.log('Updating existing session:', sessionContentId)
+        
+        const updateData = {
+          title: sessionTitle,
+          contentText: JSON.stringify(sessionData),
+          advisorNotes: `Warren chat session with ${conversation.messages.length} messages - Updated: ${new Date().toLocaleString()}`
+          // Note: sourceMetadata not included as advisor_content table doesn't have this column
+        }
+        
+        saveResponse = await advisorApi.updateContent(sessionContentId, advisorId, updateData)
+        setIsSessionSaved(true)
+        setHasUnsavedChanges(false)
+        
+        console.log('Session updated successfully:', sessionContentId)
+        return sessionContentId
+      } else {
+        // Create new session
+        console.log('Creating new session')
+        saveResponse = await advisorApi.saveContent(contentData)
+        setSessionContentId(saveResponse.content.id)
+        setIsSessionSaved(true)
+        setHasUnsavedChanges(false)
+        
+        console.log('Session saved to library:', saveResponse.content.id)
+        return saveResponse.content.id
+      }
+    } catch (error) {
+      console.error('Failed to save session to library:', error)
+      setHasUnsavedChanges(true)
+      throw error
+    }
+  }
 
   // Build source information from Warren response
   const buildSourceInformation = (response: WarrenResponse): SourceInformation => {
@@ -111,22 +266,37 @@ export const ChatInterface: React.FC = () => {
       messages: [...prev.messages, newMessage]
     }))
 
+    // Mark session as having unsaved changes when new messages are added
+    if (sessionContentId && !hasUnsavedChanges) {
+      setHasUnsavedChanges(true)
+    }
+
     return newMessage
-  }, [])
+  }, [sessionContentId, hasUnsavedChanges])
 
   // Send message to Warren
   const sendMessageToWarren = useCallback(async (userMessage: string) => {
-    // Add user message
-    addMessage({
-      role: 'advisor',
-      content: userMessage,
-      type: 'text'
-    })
-
-    setIsLoading(true)
-
     try {
-      // Determine if this is a refinement request
+      // 1. Ensure session exists before sending any messages
+      const sessionId = await ensureSession()
+
+      // 2. Add user message to UI
+      const userMessageObj = addMessage({
+        role: 'advisor',
+        content: userMessage,
+        type: 'text'
+      })
+
+      // 3. Persist user message immediately (graceful degradation)
+      await persistMessage(sessionId, 'user', userMessage, {
+        timestamp: new Date().toISOString(),
+        messageId: userMessageObj.id
+      })
+
+      setIsLoading(true)
+      setHasUnsavedChanges(true) // Mark session as having unsaved changes
+
+      // 4. Determine if this is a refinement request
       const isRefinement = generatedContent !== null;
       const currentContent = generatedContent?.content;
       
@@ -138,7 +308,7 @@ export const ChatInterface: React.FC = () => {
         userMessage: userMessage.substring(0, 50) + (userMessage.length > 50 ? '...' : '')
       });
       
-      // Prepare context for Warren (backend will use its own prompts)
+      // 5. Prepare context for Warren (backend will use its own prompts)
       const context = {
         conversation_history: conversation.messages,
         contentType: conversation.context?.contentType || generatedContent?.contentType,
@@ -148,19 +318,25 @@ export const ChatInterface: React.FC = () => {
         is_refinement: isRefinement
       }
 
-      // Call Warren API
+      // 6. Call Warren API
       const response: WarrenResponse = await warrenChatApi.sendMessage(
         userMessage,
-        conversation.id,
+        sessionId, // Use actual session ID instead of conversation.id
         context
       )
 
       if (response.status === 'success' && response.content) {
-        // Parse Warren's response for delimited content
+        // 7. Parse Warren's response for delimited content
         const extractedContent = parseWarrenResponse(response.content);
         
-        // Add Warren's conversational response to chat (without marketing content)
-        addMessage({
+        // 8. Generate smart session title on first response if not set
+        if (!sessionTitle && conversation.messages.length <= 1) {
+          const smartTitle = generateSessionTitle(response.content, userMessage)
+          setSessionTitle(smartTitle)
+        }
+        
+        // 9. Add Warren's conversational response to chat (without marketing content)
+        const warrenMessageObj = addMessage({
           role: 'warren',
           content: extractedContent.conversationalResponse,
           type: 'text',
@@ -169,6 +345,17 @@ export const ChatInterface: React.FC = () => {
             audience: response.metadata?.audience,
             platform: response.metadata?.platform
           }
+        })
+
+        // 10. Persist Warren message with clean conversational content (graceful degradation)
+        await persistMessage(sessionId, 'warren', extractedContent.conversationalResponse, {
+          sourceInfo: buildSourceInformation(response),
+          searchStrategy: response.search_strategy,
+          contextQuality: response.context_quality_score,
+          extractedContent: extractedContent,
+          fullResponse: response.content, // Store full response in metadata if needed
+          timestamp: new Date().toISOString(),
+          messageId: warrenMessageObj.id
         })
 
         // If marketing content was found, set it for preview
@@ -270,27 +457,35 @@ export const ChatInterface: React.FC = () => {
   const handleSaveContent = async () => {
     if (generatedContent) {
       try {
-        // Ensure we have a session ID
-        let sessionId: string = advisorSession || ''
-        if (!sessionId) {
-          const sessionResponse = await advisorApi.createSession(advisorId, 'Warren Chat Session')
-          sessionId = sessionResponse.session.session_id
-          setAdvisorSession(sessionId)
-        }
+        // Ensure we have a session (this should already exist)
+        const sessionId = await ensureSession()
 
-        // Map content type to valid backend values
+        // Map content type to valid backend values (lowercase for advisor_content table)
         const mapContentType = (type: string) => {
           const typeMap: Record<string, string> = {
             'general': 'linkedin_post',
-            'social_media': 'linkedin_post',
+            'social_media': 'linkedin_post', 
             'linkedin': 'linkedin_post',
-            'twitter': 'social_media',
+            'twitter': 'x_post',
             'email': 'email_template',
-            'website': 'website_content',
+            'website': 'website_copy',
             'newsletter': 'newsletter',
-            'blog': 'blog_post'
+            'blog': 'website_blog'
           }
           return typeMap[type.toLowerCase()] || 'linkedin_post'
+        }
+
+        // Map audience type to valid backend values (lowercase for advisor_content table)
+        const mapAudienceType = (type: string) => {
+          const audienceMap: Record<string, string> = {
+            'general_education': 'general_education',
+            'high_net_worth': 'existing_clients',
+            'retirees': 'existing_clients',
+            'young_professionals': 'new_prospects',
+            'institutional': 'existing_clients',
+            'prospects': 'new_prospects'
+          }
+          return audienceMap[type.toLowerCase()] || 'general_education'
         }
 
         // Save content to database via API
@@ -299,8 +494,8 @@ export const ChatInterface: React.FC = () => {
           title: generatedContent.title || 'Generated Content',
           contentText: generatedContent.content,
           contentType: mapContentType(generatedContent.contentType),
-          audienceType: generatedContent.audience || 'general_education',
-          sourceSessionId: sessionId, // Now guaranteed to be string
+          audienceType: mapAudienceType(generatedContent.audience || 'general_education'),
+          sourceSessionId: sessionId,
           advisorNotes: 'Generated via Warren chat',
           intendedChannels: [generatedContent.platform.toLowerCase()],
           sourceMetadata: generatedContent.sourceInfo
@@ -322,6 +517,30 @@ export const ChatInterface: React.FC = () => {
           type: 'error'
         })
       }
+    }
+  }
+
+  const handleSaveSession = async () => {
+    try {
+      const contentId = await saveSessionToLibrary()
+      const isUpdate = sessionContentId !== null
+      
+      addMessage({
+        role: 'warren',
+        content: isUpdate 
+          ? `✅ Chat session updated in your library! (ID: ${contentId})\n\nYour latest conversation has been saved.`
+          : `✅ Chat session saved to your library! (ID: ${contentId})\n\nYou can continue this conversation later from the Library page.`,
+        type: 'text'
+      })
+    } catch (error) {
+      console.error('Failed to save session:', error)
+      addMessage({
+        role: 'warren',
+        content: sessionContentId 
+          ? '❌ Failed to update session in library. Please try again.'
+          : '❌ Failed to save session to library. Please copy your content manually if needed.',
+        type: 'error'
+      })
     }
   }
 
@@ -400,51 +619,106 @@ export const ChatInterface: React.FC = () => {
           // Clear the context from sessionStorage
           sessionStorage.removeItem('warrenEditContext')
           
-          // Set the advisor session
-          if (context.sessionId) {
+          if (context.isSessionResume) {
+            // Handle full session resume with complete conversation history
+            console.log('Resuming Warren session:', context.sessionId)
+            
             setAdvisorSession(context.sessionId)
+            setSessionContentId(context.contentId)
+            setSessionTitle(context.title)
+            setIsSessionSaved(true) // Already saved session
             setIsLoadingHistory(true)
             
-            // Load chat history
-            const historyResponse = await advisorApi.getSessionMessages(context.sessionId, advisorId)
-            const messages = historyResponse.messages || []
+            // Restore messages from saved session data
+            const savedMessages = context.messages || []
             
-            // Convert database messages to UI format
-            const uiMessages = messages.map((msg: any) => ({
-              id: msg.id,
-              role: msg.message_type === 'user' ? 'advisor' : 'warren',
+            // Convert saved messages to UI format and ensure proper timestamps
+            const uiMessages = savedMessages.map((msg: any) => ({
+              id: msg.id || generateMessageId(),
+              role: msg.role,
               content: msg.content,
-              timestamp: new Date(msg.created_at),
-              type: 'text',
-              metadata: msg.metadata
+              timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+              type: msg.type || 'text',
+              metadata: msg.metadata || {}
             }))
             
-            // Update conversation with loaded messages
+            // Update conversation with restored messages
             setConversation(prev => ({
               ...prev,
               id: context.sessionId,
               messages: uiMessages
             }))
             
-            // Set the generated content for preview
-            const generatedContent: GeneratedContent = {
-              title: context.title,
-              content: context.content,
-              contentType: context.contentType,
-              audience: context.audienceType,
-              platform: context.platform,
-              sourceInfo: context.sourceMetadata
+            // Restore generated content if it exists and is properly formatted
+            if (context.generatedContent && typeof context.generatedContent === 'object') {
+              // Ensure the generated content has all required fields
+              const restoredContent: GeneratedContent = {
+                title: context.generatedContent.title || 'Restored Content',
+                content: context.generatedContent.content || '',
+                contentType: context.generatedContent.contentType || 'general',
+                audience: context.generatedContent.audience || 'general_education',
+                platform: context.generatedContent.platform || 'general',
+                complianceScore: context.generatedContent.complianceScore,
+                sourceInfo: context.generatedContent.sourceInfo
+              }
+              setGeneratedContent(restoredContent)
             }
             
-            setGeneratedContent(generatedContent)
             setIsLoadingHistory(false)
             
-            // Add a Warren message indicating the content was loaded
+            // Add a Warren message indicating the session was resumed
             addMessage({
               role: 'warren',
-              content: `✅ Content loaded! I've restored our previous conversation and your draft content. You can continue editing or ask me to make changes.`,
+              content: `✅ Welcome back! I've restored your previous chat session "${context.title}". You can continue our conversation from where we left off.`,
               type: 'text'
             })
+          } else {
+            // Handle regular edit context (single content editing)
+            if (context.sessionId) {
+              setAdvisorSession(context.sessionId)
+              setIsLoadingHistory(true)
+              
+              // Load chat history from API
+              const historyResponse = await advisorApi.getSessionMessages(context.sessionId, advisorId)
+              const messages = historyResponse.messages || []
+              
+              // Convert database messages to UI format
+              const uiMessages = messages.map((msg: any) => ({
+                id: msg.id,
+                role: msg.message_type === 'user' ? 'advisor' : 'warren',
+                content: msg.content,
+                timestamp: new Date(msg.created_at),
+                type: 'text',
+                metadata: msg.metadata
+              }))
+              
+              // Update conversation with loaded messages
+              setConversation(prev => ({
+                ...prev,
+                id: context.sessionId,
+                messages: uiMessages
+              }))
+              
+              // Set the generated content for preview
+              const generatedContent: GeneratedContent = {
+                title: context.title,
+                content: context.content,
+                contentType: context.contentType,
+                audience: context.audienceType,
+                platform: context.platform,
+                sourceInfo: context.sourceMetadata
+              }
+              
+              setGeneratedContent(generatedContent)
+              setIsLoadingHistory(false)
+              
+              // Add a Warren message indicating the content was loaded
+              addMessage({
+                role: 'warren',
+                content: `✅ Content loaded! I've restored our previous conversation and your draft content. You can continue editing or ask me to make changes.`,
+                type: 'text'
+              })
+            }
           }
         } catch (error) {
           console.error('Failed to load edit context:', error)
@@ -456,18 +730,26 @@ export const ChatInterface: React.FC = () => {
     loadEditContext()
   }, [])
 
-  // Scroll to bottom when content preview opens
+  // Scroll to bottom when content preview opens or new messages arrive
   React.useEffect(() => {
-    if (generatedContent) {
-      // Small delay to allow layout to settle before scrolling
-      setTimeout(() => {
-        const messagesContainer = document.querySelector('.messages-container')
-        if (messagesContainer) {
-          messagesContainer.scrollTop = messagesContainer.scrollHeight
-        }
-      }, 100)
+    const scrollToBottom = () => {
+      const messagesContainer = document.querySelector('.messages-container')
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight
+      }
     }
-  }, [generatedContent])
+
+    // Scroll when new messages are added
+    if (conversation.messages.length > 0) {
+      // Small delay to allow DOM to update
+      setTimeout(scrollToBottom, 100)
+    }
+
+    // Scroll when content preview opens
+    if (generatedContent) {
+      setTimeout(scrollToBottom, 100)
+    }
+  }, [conversation.messages.length, generatedContent])
 
   // Add/remove mouse event listeners
   React.useEffect(() => {
@@ -482,11 +764,52 @@ export const ChatInterface: React.FC = () => {
     }
   }, [isResizing, handleMouseMove, handleMouseUp])
 
+  // Navigation protection for unsaved changes
+  React.useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges && !isSessionSaved) {
+        const message = 'You have unsaved changes in your Warren chat session. Are you sure you want to leave?'
+        e.returnValue = message
+        return message
+      }
+    }
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (hasUnsavedChanges && !isSessionSaved) {
+        const shouldLeave = window.confirm(
+          'You have unsaved changes in your Warren chat session. Would you like to save it to your library before leaving?\n\nClick OK to save and continue, or Cancel to stay on this page.'
+        )
+        
+        if (shouldLeave) {
+          // Try to save session before leaving
+          saveSessionToLibrary().catch(error => {
+            console.error('Failed to save session before navigation:', error)
+            alert('Failed to save session. Please copy your content manually before leaving.')
+          })
+        } else {
+          // Prevent navigation
+          window.history.pushState(null, '', window.location.pathname)
+          e.preventDefault()
+        }
+      }
+    }
+
+    if (hasUnsavedChanges) {
+      window.addEventListener('beforeunload', handleBeforeUnload)
+      window.addEventListener('popstate', handlePopState)
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [hasUnsavedChanges, isSessionSaved, saveSessionToLibrary])
+
   return (
     <div className="h-full flex flex-col">
       <PageHeader 
         title="Warren AI"
-        subtitle="Compliance-focused content assistant"
+        subtitle={sessionTitle || "Compliance-focused content assistant"}
       />
       
       {/* Main Content Area - Dynamic Layout with Resizer */}
@@ -634,9 +957,9 @@ export const ChatInterface: React.FC = () => {
                       <Copy className="h-4 w-4 mr-1" />
                       Copy
                     </Button>
-                    <Button variant="outline" size="sm" onClick={handleSaveContent}>
+                    <Button variant="outline" size="sm" onClick={handleSaveSession}>
                       <Save className="h-4 w-4 mr-1" />
-                      Save
+                      {sessionContentId ? 'Update Session' : 'Save Session'}
                     </Button>
                     <Button variant="default" size="sm" onClick={handleSubmitForReview}>
                       <Send className="h-4 w-4 mr-1" />

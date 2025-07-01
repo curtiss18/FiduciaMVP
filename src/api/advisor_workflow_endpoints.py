@@ -170,6 +170,30 @@ async def update_content_status(
     
     return result
 
+@advisor_router.put("/content/{content_id}")
+async def update_content(
+    content_id: int,
+    advisor_id: str = Query(..., description="Advisor ID for access control"),
+    title: str = None,
+    content_text: str = None,
+    advisor_notes: str = None,
+    source_metadata: dict = None
+):
+    """Update full content (for session updates)."""
+    result = await advisor_workflow_service.update_content(
+        content_id=content_id,
+        advisor_id=advisor_id,
+        title=title,
+        content_text=content_text,
+        advisor_notes=advisor_notes,
+        source_metadata=source_metadata
+    )
+    
+    if result["status"] == "error":
+        raise HTTPException(status_code=400, detail=result["error"])
+    
+    return result
+
 @advisor_router.get("/content/statistics")
 async def get_content_statistics(
     advisor_id: str = Query(..., description="Advisor ID")

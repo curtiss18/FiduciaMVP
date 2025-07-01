@@ -143,6 +143,23 @@ export const advisorApi = {
     return response.data;
   },
 
+  // Update full content (for session updates)
+  updateContent: async (contentId: string, advisorId: string, updateData: {
+    title?: string;
+    contentText?: string;
+    advisorNotes?: string;
+  }) => {
+    const params: any = { advisor_id: advisorId };
+    
+    if (updateData.title) params.title = updateData.title;
+    if (updateData.contentText) params.content_text = updateData.contentText;
+    if (updateData.advisorNotes) params.advisor_notes = updateData.advisorNotes;
+    // Note: source_metadata removed as advisor_content table doesn't have this column
+
+    const response = await api.put(`/advisor/content/${contentId}`, null, { params });
+    return response.data;
+  },
+
   // Analytics
   getStatistics: async (advisorId: string) => {
     const response = await api.get('/advisor/content/statistics', {

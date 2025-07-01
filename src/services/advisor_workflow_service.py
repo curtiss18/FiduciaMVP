@@ -239,16 +239,16 @@ class AdvisorWorkflowService:
                 # Create content using SQLAlchemy with explicit enum casting
                 from sqlalchemy import cast, Enum as SQLEnum
                 
-                # Use raw SQL insert with proper enum casting
+                # Use raw SQL insert without enum casting for advisor_content table
                 query = text("""
                     INSERT INTO advisor_content 
                     (advisor_id, title, content_text, content_type, audience_type, 
                      source_session_id, source_message_id, advisor_notes, 
                      intended_channels, status, created_at, updated_at)
                     VALUES 
-                    (:advisor_id, :title, :content_text, CAST(:content_type AS contenttype), 
-                     CAST(:audience_type AS audiencetype), :source_session_id, :source_message_id, 
-                     :advisor_notes, :intended_channels, CAST(:status AS contentstatus), NOW(), NOW())
+                    (:advisor_id, :title, :content_text, :content_type, 
+                     :audience_type, :source_session_id, :source_message_id, 
+                     :advisor_notes, :intended_channels, :status, NOW(), NOW())
                     RETURNING id, created_at, updated_at
                 """)
                 
@@ -457,6 +457,72 @@ class AdvisorWorkflowService:
                 await db.rollback()
                 return {"status": "error", "error": str(e)}
 
+    async def update_content(
+        self,
+        content_id: int,
+        advisor_id: str,
+        title: Optional[str] = None,
+        content_text: Optional[str] = None,
+        advisor_notes: Optional[str] = None,
+        source_metadata: Optional[dict] = None
+    ) -> Dict[str, Any]:
+        """Update full content (for session updates)."""
+        async with AsyncSessionLocal() as db:
+            try:
+                # Verify content belongs to advisor
+                result = await db.execute(
+                    select(AdvisorContent)
+                    .where(and_(
+                        AdvisorContent.id == content_id,
+                        AdvisorContent.advisor_id == advisor_id
+                    ))
+                )
+                content = result.scalar_one_or_none()
+                
+                if not content:
+                    return {"status": "error", "error": "Content not found or access denied"}
+                
+                # Build update data (excluding source_metadata since column doesn't exist)
+                update_data = {"updated_at": func.now()}
+                
+                if title is not None:
+                    update_data["title"] = title
+                if content_text is not None:
+                    update_data["content_text"] = content_text
+                if advisor_notes is not None:
+                    update_data["advisor_notes"] = advisor_notes
+                # Note: source_metadata column doesn't exist in advisor_content table
+                
+                # Perform update
+                await db.execute(
+                    update(AdvisorContent)
+                    .where(AdvisorContent.id == content_id)
+                    .values(**update_data)
+                )
+                await db.commit()
+                
+                # Return updated content
+                updated_result = await db.execute(
+                    select(AdvisorContent)
+                    .where(AdvisorContent.id == content_id)
+                )
+                updated_content = updated_result.scalar_one()
+                
+                return {
+                    "status": "success",
+                    "content": {
+                        "id": updated_content.id,
+                        "title": updated_content.title,
+                        "content_text": updated_content.content_text,
+                        "advisor_notes": updated_content.advisor_notes,
+                        "updated_at": updated_content.updated_at.isoformat() if updated_content.updated_at else None
+                    }
+                }
+                
+            except Exception as e:
+                await db.rollback()
+                print(f"Error updating content: {str(e)}")
+                return {"status": "error", "error": str(e)}
 
     async def get_content_statistics(self, advisor_id: str) -> Dict[str, Any]:
         """Get advisor's content statistics."""

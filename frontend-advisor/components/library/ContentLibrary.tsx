@@ -101,6 +101,35 @@ export const ContentLibrary: React.FC = () => {
     }
   }
 
+  // Handle resuming Warren session - load entire chat history
+  const handleResumeSession = async (item: AdvisorContent) => {
+    try {
+      // Parse session data from content_text
+      const sessionData = JSON.parse(item.content_text)
+      
+      // Store session info for Warren to restore complete conversation
+      const sessionContext = {
+        isSessionResume: true,
+        sessionId: item.source_session_id,
+        contentId: item.id,
+        title: item.title,
+        messages: sessionData.messages || [],
+        generatedContent: sessionData.generatedContent,
+        createdAt: sessionData.createdAt
+      }
+      
+      // Store in sessionStorage for Warren to retrieve
+      sessionStorage.setItem('warrenEditContext', JSON.stringify(sessionContext))
+      
+      // Navigate to Warren chat
+      window.location.href = '/chat'
+    } catch (error) {
+      console.error('Failed to resume Warren session:', error)
+      // Fallback to regular edit if session data is corrupted
+      handleEditInWarren(item)
+    }
+  }
+
   // Handle submit for review
   const handleSubmitForReview = async (item: AdvisorContent) => {
     try {
@@ -151,13 +180,16 @@ export const ContentLibrary: React.FC = () => {
       website_content: 'Website Content',
       newsletter: 'Newsletter',
       social_media: 'Social Media',
-      blog_post: 'Blog Post'
+      blog_post: 'Blog Post',
+      warren_session: 'Warren Session'
     }
     return typeMap[type] || type
   }
 
   // Get platform icon
-  const getPlatformIcon = (channels: string[]) => {
+  const getPlatformIcon = (channels: string[], item: AdvisorContent) => {
+    // Check if this is a Warren session by metadata
+    if (item.source_metadata?.isWarrenSession || channels.includes('warren_chat')) return '🛡️'
     if (channels.includes('linkedin')) return '💼'
     if (channels.includes('twitter')) return '🐦'
     if (channels.includes('email')) return '📧'
@@ -292,7 +324,7 @@ export const ContentLibrary: React.FC = () => {
                 <Card key={item.id} className="flex flex-col hover:shadow-md transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2 w-full">
-                      <span className="text-lg">{getPlatformIcon(item.intended_channels)}</span>
+                      <span className="text-lg">{getPlatformIcon(item.intended_channels, item)}</span>
                       <h3 className="font-semibold truncate text-sm flex-1">{item.title}</h3>
                     </div>
                     <div className="flex items-center justify-between gap-2">
@@ -322,35 +354,68 @@ export const ContentLibrary: React.FC = () => {
                   </CardHeader>
 
                   <CardContent className="flex-1 pb-3">
-                    <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                      {item.content_text}
-                    </p>
+                    {item.source_metadata?.isWarrenSession ? (
+                      // Special display for Warren sessions
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                          💬 {item.source_metadata?.messageCount || 0} messages
+                          {item.source_metadata?.hasGeneratedContent && ' • Content generated'}
+                        </p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          Warren chat session - Click "Resume Chat" to continue the conversation
+                        </p>
+                      </div>
+                    ) : (
+                      // Regular content preview
+                      <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+                        {item.content_text}
+                      </p>
+                    )}
 
                     {/* Actions */}
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleCopyContent(item)}>
-                        <Copy className="h-3 w-3 mr-1" />
-                        Copy
-                      </Button>
-                      
-                      {item.status === 'draft' && (
+                      {item.source_metadata?.isWarrenSession ? (
+                        // Special actions for Warren sessions
                         <>
-                          <Button variant="outline" size="sm" onClick={() => handleEditInWarren(item)}>
+                          <Button variant="outline" size="sm" onClick={() => handleResumeSession(item)}>
                             <Edit className="h-3 w-3 mr-1" />
-                            Edit
+                            Resume Chat
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleSubmitForReview(item)}>
-                            <Send className="h-3 w-3 mr-1" />
-                            Submit
-                          </Button>
+                          {item.status === 'draft' && (
+                            <Button variant="outline" size="sm" onClick={() => handleSubmitForReview(item)}>
+                              <Send className="h-3 w-3 mr-1" />
+                              Archive
+                            </Button>
+                          )}
                         </>
-                      )}
-                      
-                      {item.status === 'approved' && (
-                        <Button variant="default" size="sm">
-                          <Send className="h-3 w-3 mr-1" />
-                          Distribute
-                        </Button>
+                      ) : (
+                        // Regular content actions
+                        <>
+                          <Button variant="outline" size="sm" onClick={() => handleCopyContent(item)}>
+                            <Copy className="h-3 w-3 mr-1" />
+                            Copy
+                          </Button>
+                          
+                          {item.status === 'draft' && (
+                            <>
+                              <Button variant="outline" size="sm" onClick={() => handleEditInWarren(item)}>
+                                <Edit className="h-3 w-3 mr-1" />
+                                Edit
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => handleSubmitForReview(item)}>
+                                <Send className="h-3 w-3 mr-1" />
+                                Submit
+                              </Button>
+                            </>
+                          )}
+                          
+                          {item.status === 'approved' && (
+                            <Button variant="default" size="sm">
+                              <Send className="h-3 w-3 mr-1" />
+                              Distribute
+                            </Button>
+                          )}
+                        </>
                       )}
                     </div>
                   </CardContent>
