@@ -434,7 +434,7 @@ async def test_vector_search(request: dict):
         if content_type:
             try:
                 from src.models.refactored_database import ContentType
-                content_type_enum = ContentType(content_type.lower())
+                content_type_enum = ContentType(content_type.upper())
             except ValueError:
                 pass
         
@@ -495,14 +495,14 @@ async def list_content(
         content_type_enum = None
         if content_type:
             try:
-                content_type_enum = ContentType(content_type.lower())
+                content_type_enum = ContentType(content_type.upper())
             except ValueError:
                 return {"status": "error", "error": f"Invalid content_type: {content_type}"}
         
         audience_type_enum = None
         if audience_type:
             try:
-                audience_type_enum = AudienceType(audience_type.lower())
+                audience_type_enum = AudienceType(audience_type.upper())
             except ValueError:
                 return {"status": "error", "error": f"Invalid audience_type: {audience_type}"}
         

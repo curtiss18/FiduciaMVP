@@ -11,38 +11,38 @@ Base = declarative_base()
 
 # Enums for controlled vocabularies
 class ContentType(enum.Enum):
-    WEBSITE_BLOG = "website_blog"
-    NEWSLETTER = "newsletter"
-    DIRECT_MAILING = "direct_mailing"
-    X_POST = "x_post"
-    FACEBOOK_POST = "facebook_post"
-    LINKEDIN_POST = "linkedin_post"
-    YOUTUBE_VIDEO = "youtube_video"
-    INSTAGRAM_POST = "instagram_post"
-    TIKTOK_VIDEO = "tiktok_video"
-    RADIO_SCRIPT = "radio_script"
-    TV_SCRIPT = "tv_script"
-    EMAIL_TEMPLATE = "email_template"
-    WEBSITE_COPY = "website_copy"
+    WEBSITE_BLOG = "WEBSITE_BLOG"
+    NEWSLETTER = "NEWSLETTER"
+    DIRECT_MAILING = "DIRECT_MAILING"
+    X_POST = "X_POST"
+    FACEBOOK_POST = "FACEBOOK_POST"
+    LINKEDIN_POST = "LINKEDIN_POST"
+    YOUTUBE_VIDEO = "YOUTUBE_VIDEO"
+    INSTAGRAM_POST = "INSTAGRAM_POST"
+    TIKTOK_VIDEO = "TIKTOK_VIDEO"
+    RADIO_SCRIPT = "RADIO_SCRIPT"
+    TV_SCRIPT = "TV_SCRIPT"
+    EMAIL_TEMPLATE = "EMAIL_TEMPLATE"
+    WEBSITE_COPY = "WEBSITE_COPY"
 
 class AudienceType(enum.Enum):
-    CLIENT_COMMUNICATION = "client_communication"
-    PROSPECT_ADVERTISING = "prospect_advertising"
-    GENERAL_EDUCATION = "general_education"
-    EXISTING_CLIENTS = "existing_clients"
-    NEW_PROSPECTS = "new_prospects"
+    CLIENT_COMMUNICATION = "CLIENT_COMMUNICATION"
+    PROSPECT_ADVERTISING = "PROSPECT_ADVERTISING"
+    GENERAL_EDUCATION = "GENERAL_EDUCATION"
+    EXISTING_CLIENTS = "EXISTING_CLIENTS"
+    NEW_PROSPECTS = "NEW_PROSPECTS"
 
 class ApprovalStatus(enum.Enum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    NEEDS_REVISION = "needs_revision"
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    NEEDS_REVISION = "NEEDS_REVISION"
 
 class SourceType(enum.Enum):
-    FIDUCIA_CREATED = "fiducia_created"
-    USER_CONTRIBUTED = "user_contributed"
-    THIRD_PARTY_LICENSED = "third_party_licensed"
-    WARREN_GENERATED = "warren_generated"
+    FIDUCIA_CREATED = "FIDUCIA_CREATED"
+    USER_CONTRIBUTED = "USER_CONTRIBUTED"
+    THIRD_PARTY_LICENSED = "THIRD_PARTY_LICENSED"
+    WARREN_GENERATED = "WARREN_GENERATED"
 
 
 class MarketingContent(Base):
