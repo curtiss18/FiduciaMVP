@@ -186,14 +186,14 @@ class ContentManagementService:
                 new_content = MarketingContent(
                     title=content_data["title"],
                     content_text=content_data["content_text"],
-                    content_type=ContentType(content_data["content_type"]),
-                    audience_type=AudienceType(content_data["audience_type"]),
+                    content_type=ContentType(content_data["content_type"].upper()),
+                    audience_type=AudienceType(content_data["audience_type"].upper()),
                     tone=content_data.get("tone"),
                     topic_focus=content_data.get("topic_focus"),
                     target_demographics=content_data.get("target_demographics"),
-                    approval_status=ApprovalStatus(content_data.get("approval_status", "approved")),
+                    approval_status=ApprovalStatus(content_data.get("approval_status", "APPROVED").upper()),
                     compliance_score=content_data.get("compliance_score", 1.0),
-                    source_type=SourceType(content_data.get("source_type", "fiducia_created")),
+                    source_type=SourceType(content_data.get("source_type", "FIDUCIA_CREATED").upper()),
                     original_source=content_data.get("original_source"),
                     contributed_by_user_id=content_data.get("contributed_by_user_id"),
                     tags=content_data.get("tags") if content_data.get("tags") else None,
@@ -261,10 +261,10 @@ class ContentManagementService:
                     content_item.content_text = content_data["content_text"]
                 
                 if "content_type" in content_data:
-                    content_item.content_type = ContentType(content_data["content_type"])
+                    content_item.content_type = ContentType(content_data["content_type"].upper())
                 
                 if "audience_type" in content_data:
-                    content_item.audience_type = AudienceType(content_data["audience_type"])
+                    content_item.audience_type = AudienceType(content_data["audience_type"].upper())
                 
                 if "tone" in content_data:
                     content_item.tone = content_data["tone"]
@@ -276,7 +276,7 @@ class ContentManagementService:
                     content_item.target_demographics = content_data["target_demographics"]
                 
                 if "approval_status" in content_data:
-                    content_item.approval_status = ApprovalStatus(content_data["approval_status"])
+                    content_item.approval_status = ApprovalStatus(content_data["approval_status"].upper())
                 
                 if "compliance_score" in content_data:
                     content_item.compliance_score = content_data["compliance_score"]
