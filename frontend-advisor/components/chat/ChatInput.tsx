@@ -4,10 +4,12 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Send, Paperclip } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { AttachmentDropdown } from './AttachmentDropdown'
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void
   onFileUpload?: (files: FileList) => void
+  onYouTubeUrl?: (url: string) => void
   disabled?: boolean
   placeholder?: string
   standalone?: boolean // New prop for centered layout
@@ -16,6 +18,7 @@ interface ChatInputProps {
 export const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
   onFileUpload,
+  onYouTubeUrl,
   disabled = false,
   placeholder = "Ask Warren to create compliant content...",
   standalone = false
@@ -90,28 +93,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
         {/* Button row - File upload left, Send button right */}
         <div className="flex items-center justify-between">
-          {/* File upload button - Bottom left */}
-          <div className="relative">
-            <input
-              type="file"
-              id="file-upload"
-              className="hidden"
-              multiple
-              accept=".txt,.pdf,.docx,.md"
-              onChange={handleFileUpload}
-              disabled={disabled}
-            />
-            <Button
-              variant="outline"
-              size="icon"
-              className="shrink-0"
-              onClick={() => document.getElementById('file-upload')?.click()}
-              disabled={disabled}
-              title="Upload documents for context"
-            >
-              <Paperclip className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* Attachment dropdown - Bottom left */}
+          <AttachmentDropdown
+            onFileUpload={onFileUpload}
+            onYouTubeUrl={onYouTubeUrl}
+            disabled={disabled}
+          />
 
           {/* Send button - Bottom right */}
           <Button

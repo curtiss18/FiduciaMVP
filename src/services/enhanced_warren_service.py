@@ -38,7 +38,8 @@ class EnhancedWarrenService:
         user_id: Optional[str] = None,
         session_id: Optional[str] = None,
         current_content: Optional[str] = None,
-        is_refinement: bool = False
+        is_refinement: bool = False,
+        youtube_context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Generate content using enhanced vector search with automatic fallbacks.
@@ -76,7 +77,7 @@ class EnhancedWarrenService:
             # Generate content with Warren using the assembled context
             warren_content = await self._generate_with_enhanced_context(
                 context_data, user_request, content_type, audience_type, 
-                current_content, is_refinement
+                current_content, is_refinement, youtube_context
             )
             
             return {
@@ -291,7 +292,8 @@ class EnhancedWarrenService:
         content_type: str,
         audience_type: Optional[str],
         current_content: Optional[str] = None,
-        is_refinement: bool = False
+        is_refinement: bool = False,
+        youtube_context: Optional[Dict[str, Any]] = None
     ) -> str:
         """Generate content using Warren with enhanced context and smart prompt selection."""
         
@@ -354,6 +356,42 @@ Wrap your refined content in ##MARKETINGCONTENT## delimiters and explain your ch
                 context_parts.append(f"\n## REQUIRED DISCLAIMERS:")
                 for disclaimer in disclaimers[:2]:
                     context_parts.append(f"\n**{disclaimer['title']}**: {disclaimer['content_text'][:200]}...")
+            
+            # NEW: Add YouTube video context if provided
+            if youtube_context:
+                logger.info(f"Processing YouTube context for Warren")
+                context_parts.append(f"\n## VIDEO CONTEXT:")
+                video_info = youtube_context.get("metadata", {})
+                stats = youtube_context.get("stats", {})
+                
+                context_parts.append(f"\nYou are creating content based on a YouTube video:")
+                if video_info.get("url"):
+                    context_parts.append(f"Video URL: {video_info['url']}")
+                if stats.get("word_count"):
+                    context_parts.append(f"Transcript length: ~{stats['word_count']} words")
+                
+                # Add transcript (truncated if too long)
+                transcript = youtube_context.get("transcript", "")
+                if transcript:
+                    logger.info(f"Adding transcript to Warren prompt: {len(transcript)} characters")
+                    context_parts.append(f"\n**VIDEO TRANSCRIPT PROVIDED BELOW:**")
+                    
+                    # Limit transcript to reasonable length for prompt
+                    max_transcript_length = 4000  # Increased from 3000 for more context
+                    if len(transcript) > max_transcript_length:
+                        transcript_preview = transcript[:max_transcript_length] + "..."
+                        context_parts.append(f"\n{transcript_preview}")
+                        context_parts.append(f"\n[Note: This is a preview of the full {len(transcript)}-character transcript]")
+                        logger.info(f"Transcript truncated to {max_transcript_length} characters for prompt")
+                    else:
+                        context_parts.append(f"\n{transcript}")
+                        logger.info(f"Full transcript included in prompt")
+                else:
+                    logger.warning(f"No transcript found in YouTube context!")
+                
+                context_parts.append(f"\n**IMPORTANT**: You have been provided with the actual video transcript above. Please create content that references, summarizes, or analyzes the key points from this video transcript while maintaining SEC/FINRA compliance. Do NOT say you haven't seen the video - you have the transcript content.")
+            else:
+                logger.info(f"No YouTube context provided to Warren")
             
             knowledge_context = "\n".join(context_parts)
             

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from typing import Optional
+import logging
 from src.services.claude_service import claude_service
 from src.services.knowledge_base_service import get_knowledge_service
 from src.services.async_knowledge_service import async_kb_service
@@ -10,8 +11,11 @@ from src.services.embedding_service import embedding_service
 from src.services.vector_search_service import vector_search_service
 from src.services.content_vectorization_service import content_vectorization_service
 from src.services.content_management_service import content_management_service
+from src.services.youtube_transcript_service import youtube_transcript_service
 from src.models.refactored_database import ContentType, AudienceType, ApprovalStatus, SourceType
 from src.core.database import check_db_connection, create_tables, get_db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -266,13 +270,14 @@ async def search_database(query: str, limit: int = 10):
 @router.post("/warren/generate-v3")
 async def warren_generate_content_v3(request: dict):
     """
-    Warren V3 with Enhanced Vector Search + Automatic Fallbacks
+    Warren V3 with Enhanced Vector Search + Automatic Fallbacks + YouTube Support
     
     This is the Hybrid MVP+ implementation with:
     - Primary: Vector similarity search
     - Fallback: Text search if vector fails
     - Emergency fallback: Original Warren V2
     - Smart prompt selection: Main vs refinement prompts
+    - NEW: YouTube video transcript integration
     """
     user_request = request.get("request", "")
     content_type = request.get("content_type", "linkedin_post")
@@ -284,11 +289,56 @@ async def warren_generate_content_v3(request: dict):
     current_content = request.get("current_content")
     is_refinement = request.get("is_refinement", False)
     
+    # NEW: YouTube URL support
+    youtube_url = request.get("youtube_url")
+    
     if not user_request:
         return {"error": "Content request is required"}
     
     try:
-        # Use the enhanced Warren service with refinement support
+        # NEW: Process YouTube URL if provided
+        youtube_context = None
+        if youtube_url:
+            try:
+                logger.info(f"Processing YouTube URL: {youtube_url}")
+                transcript_result = await youtube_transcript_service.get_transcript_from_url(youtube_url)
+                
+                if transcript_result["success"]:
+                    # Create context from transcript
+                    transcript_text = transcript_result["transcript"]
+                    metadata = transcript_result.get("metadata", {})
+                    stats = transcript_result.get("stats", {})
+                    
+                    # DEBUG: Log transcript info
+                    logger.info(f"YouTube transcript fetched: {len(transcript_text)} characters")
+                    logger.info(f"Transcript preview: {transcript_text[:200]}...")
+                    
+                    youtube_context = {
+                        "transcript": transcript_text,
+                        "video_url": youtube_url,
+                        "video_id": transcript_result.get("video_id"),
+                        "metadata": metadata,
+                        "stats": stats
+                    }
+                    
+                    logger.info(f"YouTube transcript processed: {stats.get('character_count', 0)} characters")
+                else:
+                    logger.warning(f"YouTube transcript failed: {transcript_result['error']}")
+                    return {
+                        "status": "error",
+                        "error": f"Could not process YouTube video: {transcript_result['error']}",
+                        "youtube_url": youtube_url
+                    }
+                    
+            except Exception as youtube_error:
+                logger.error(f"YouTube processing exception: {str(youtube_error)}")
+                return {
+                    "status": "error", 
+                    "error": f"YouTube processing failed: {str(youtube_error)}",
+                    "youtube_url": youtube_url
+                }
+        
+        # Use the enhanced Warren service with refinement support and YouTube context
         result = await enhanced_warren_service.generate_content_with_enhanced_context(
             user_request=user_request,
             content_type=content_type,
@@ -296,8 +346,17 @@ async def warren_generate_content_v3(request: dict):
             user_id=user_id,
             session_id=session_id,
             current_content=current_content,
-            is_refinement=is_refinement
+            is_refinement=is_refinement,
+            youtube_context=youtube_context  # NEW: Pass YouTube context
         )
+        
+        # Add YouTube info to response if it was used
+        if youtube_context:
+            result["youtube_info"] = {
+                "url": youtube_url,
+                "video_id": youtube_context["video_id"],
+                "transcript_stats": youtube_context["stats"]
+            }
         
         return result
         

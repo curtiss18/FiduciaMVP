@@ -275,7 +275,7 @@ export const ChatInterface: React.FC = () => {
   }, [sessionContentId, hasUnsavedChanges])
 
   // Send message to Warren
-  const sendMessageToWarren = useCallback(async (userMessage: string) => {
+  const sendMessageToWarren = useCallback(async (userMessage: string, youtubeUrl?: string) => {
     try {
       // 1. Ensure session exists before sending any messages
       const sessionId = await ensureSession()
@@ -290,7 +290,8 @@ export const ChatInterface: React.FC = () => {
       // 3. Persist user message immediately (graceful degradation)
       await persistMessage(sessionId, 'user', userMessage, {
         timestamp: new Date().toISOString(),
-        messageId: userMessageObj.id
+        messageId: userMessageObj.id,
+        youtubeUrl: youtubeUrl // Include YouTube URL in metadata
       })
 
       setIsLoading(true)
@@ -305,7 +306,8 @@ export const ChatInterface: React.FC = () => {
         isRefinement,
         hasGeneratedContent: !!generatedContent,
         currentContentLength: currentContent?.length || 0,
-        userMessage: userMessage.substring(0, 50) + (userMessage.length > 50 ? '...' : '')
+        userMessage: userMessage.substring(0, 50) + (userMessage.length > 50 ? '...' : ''),
+        youtubeUrl: youtubeUrl
       });
       
       // 5. Prepare context for Warren (backend will use its own prompts)
@@ -315,7 +317,8 @@ export const ChatInterface: React.FC = () => {
         audience: conversation.context?.audience || generatedContent?.audience,
         platform: conversation.context?.platform || generatedContent?.platform,
         current_content: currentContent,
-        is_refinement: isRefinement
+        is_refinement: isRefinement,
+        youtube_url: youtubeUrl // Include YouTube URL in context
       }
 
       // 6. Call Warren API
@@ -434,6 +437,13 @@ export const ChatInterface: React.FC = () => {
       content: 'File upload feature will be available in the next update! For now, you can describe your content needs and I\'ll help you create compliant content.',
       type: 'text'
     })
+  }
+
+  // Handle YouTube URL submission
+  const handleYouTubeUrl = (url: string) => {
+    // Create a message indicating YouTube processing
+    const message = `Create content based on this YouTube video: ${url}`
+    sendMessageToWarren(message, url)
   }
 
   const handleCopyContent = () => {
@@ -847,6 +857,7 @@ export const ChatInterface: React.FC = () => {
                       <ChatInput
                         onSendMessage={sendMessageToWarren}
                         onFileUpload={handleFileUpload}
+                        onYouTubeUrl={handleYouTubeUrl}
                         disabled={isLoading || isLoadingHistory}
                         placeholder={isLoadingHistory ? "Loading chat history..." : "Tell Warren what content you'd like to create..."}
                         standalone={true}
@@ -873,6 +884,7 @@ export const ChatInterface: React.FC = () => {
                 <ChatInput
                   onSendMessage={sendMessageToWarren}
                   onFileUpload={handleFileUpload}
+                  onYouTubeUrl={handleYouTubeUrl}
                   disabled={isLoading || isLoadingHistory}
                   placeholder={isLoadingHistory ? "Loading chat history..." : "Continue your conversation with Warren..."}
                   standalone={!generatedContent}

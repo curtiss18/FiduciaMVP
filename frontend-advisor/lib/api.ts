@@ -38,7 +38,8 @@ export const warrenChatApi = {
       conversation_id: conversationId,
       previous_context: context,
       current_content: context?.current_content,
-      is_refinement: context?.is_refinement || false
+      is_refinement: context?.is_refinement || false,
+      youtube_url: context?.youtube_url
     });
     return response.data;
   },
