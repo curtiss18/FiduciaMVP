@@ -227,3 +227,6 @@ class ConversationMessage(Base):
     content = Column(Text, nullable=False)
     message_metadata = Column(Text, nullable=True)  # JSON metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+# Import audience models to ensure they're part of the metadata
+from src.models.audiences import AdvisorContact, AdvisorAudience, audience_contacts

@@ -1,38 +1,31 @@
 # 🏛️ FiduciaMVP
 
 > **AI-Powered Financial Compliance Content Generation Platform**  
-> **World's First Complete Database Integration for Financial AI**
+> **World's First Complete Audience Management System with Full CRUD APIs**
 
-An enterprise-grade SaaS platform that generates SEC/FINRA-compliant marketing content for financial advisors using advanced semantic search, context-aware AI technology, and revolutionary source transparency features with complete database integration and 29 production-ready marketing content pieces.
-
-## 🎯 **What is FiduciaMVP?**
-
-FiduciaMVP solves a critical problem in financial services: creating compliant marketing content is expensive and time-consuming. Financial advisors typically pay $8K-$15K/month for compliance experts, while our platform provides automated compliance at $99-$599/month - saving customers $120K-$250K annually.
-
-**Revolutionary Feature**: The world's first AI system that shows users exactly how many compliance sources informed their content generation, building trust through transparency while delivering context-aware assistance throughout the entire content lifecycle.
-
-**Built for**: Investment Advisor Representatives (IARs), Registered Investment Advisors (RIAs), and financial services firms requiring SEC/FINRA-compliant marketing content.
-
-## 🚀 **Revolutionary Features**
-
-# FiduciaMVP - AI Financial Compliance Platform
-
-> **AI-Powered Financial Compliance Content Generation Platform**  
-> **World's First Complete Archive/Restore System with Inline UX**
-
-An enterprise-grade SaaS platform that generates SEC/FINRA-compliant marketing content for financial advisors using advanced semantic search, context-aware AI technology, and revolutionary archive/restore capabilities with professional inline confirmation UX.
+An enterprise-grade SaaS platform that generates SEC/FINRA-compliant marketing content for financial advisors using advanced semantic search, context-aware AI technology, and revolutionary audience targeting capabilities with complete database integration and 41+ production-ready API endpoints.
 
 ## 🎯 **What is FiduciaMVP?**
 
 FiduciaMVP solves a critical problem in financial services: creating compliant marketing content is expensive and time-consuming. Financial advisors typically pay $8K-$15K/month for compliance experts, while our platform provides automated compliance at $99-$599/month - saving customers $120K-$250K annually.
 
-**Revolutionary Feature**: The world's first AI system with complete archive/restore functionality featuring elegant inline confirmation UX, showing users exactly how many compliance sources informed their content generation while providing professional content lifecycle management.
+**Revolutionary Feature**: The world's first AI system with complete audience management and targeting capabilities, showing users exactly how many compliance sources informed their content generation while providing professional contact and audience organization for targeted content creation.
 
-**Built for**: Investment Advisor Representatives (IARs), Registered Investment Advisors (RIAs), and financial services firms requiring SEC/FINRA-compliant marketing content with complete audit trail capabilities.
+**Built for**: Investment Advisor Representatives (IARs), Registered Investment Advisors (RIAs), and financial services firms requiring SEC/FINRA-compliant marketing content with audience targeting capabilities.
 
 ## 🚀 **Revolutionary Features**
 
-### **Complete Archive/Restore System with Inline UX** 🆕
+### **Complete Audience Management System** 🆕
+- **Contact CRUD Operations**: 5 endpoints for complete contact lifecycle management
+- **Audience CRUD Operations**: 5 endpoints for audience creation, management, and deletion  
+- **Relationship Management**: 2 endpoints for adding/removing contacts from audiences
+- **Statistics & Analytics**: 1 endpoint providing comprehensive audience and contact statistics
+- **Professional API Documentation**: All 13 endpoints documented and accessible at `/docs`
+- **Demo Data Integration**: Sample contacts and audiences for immediate testing
+- **Async SQLAlchemy Integration**: All endpoints working with async database operations
+- **Access Control**: Advisor-scoped data isolation for multi-tenant architecture
+
+### **Complete Archive/Restore System with Inline UX**
 - **Status-Based Architecture**: Elegant archive system using existing status infrastructure
 - **Inline Confirmation Cards**: Revolutionary amber-tinted confirmation replacing modal overlays
 - **Professional Visual Design**: Warning icons with clear messaging and cancel/confirm options
@@ -366,6 +359,30 @@ cd frontend-advisor && npm install && npm run dev
 - **Source Persistence**: All source transparency data saved for audit trails and analytics
 
 ## 📊 **API Reference**
+
+### **Audience Management Endpoints** 🆕
+```bash
+# Contact Management (5 endpoints)
+POST   /api/v1/contacts                             # Create new contact
+GET    /api/v1/contacts                             # List all contacts  
+GET    /api/v1/contacts/{id}                        # Get specific contact
+PUT    /api/v1/contacts/{id}                        # Update contact
+DELETE /api/v1/contacts/{id}                        # Delete contact
+
+# Audience Management (5 endpoints)
+POST   /api/v1/audiences                            # Create new audience
+GET    /api/v1/audiences                            # List all audiences
+GET    /api/v1/audiences/{id}                       # Get audience with contacts
+PUT    /api/v1/audiences/{id}                       # Update audience
+DELETE /api/v1/audiences/{id}                       # Delete audience
+
+# Relationship Management (2 endpoints)
+POST   /api/v1/audiences/{id}/contacts              # Add contacts to audience
+DELETE /api/v1/audiences/{id}/contacts/{contact_id} # Remove contact from audience
+
+# Statistics (1 endpoint)
+GET    /api/v1/statistics                           # Get audience & contact statistics
+```
 
 ### **Advisor Workflow Endpoints**
 ```bash
