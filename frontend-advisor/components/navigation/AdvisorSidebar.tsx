@@ -18,7 +18,9 @@ import {
   User,
   Sun,
   Moon,
-  Monitor
+  Monitor,
+  Users,
+  Target
 } from 'lucide-react'
 
 // Client-only wrapper to prevent hydration issues
@@ -69,6 +71,18 @@ const navigationItems: NavigationItem[] = [
     label: 'Library',
     href: '/library',
     icon: Library
+  },
+  {
+    id: 'contacts',
+    label: 'Contacts',
+    href: '/contacts',
+    icon: Users
+  },
+  {
+    id: 'audiences',
+    label: 'Audiences',
+    href: '/audiences',
+    icon: Target
   },
   {
     id: 'analytics',

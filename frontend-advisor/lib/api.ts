@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { WarrenResponse, ContentType, AudienceType } from './types';
+import { WarrenResponse, ContentType, AudienceType, Contact, Audience } from './types';
 
 // Base API client for communicating with FastAPI backend
 const api = axios.create({
@@ -176,6 +176,133 @@ export const advisorApi = {
 
   restoreContent: async (contentId: string, advisorId: string) => {
     return advisorApi.updateContentStatus(contentId, advisorId, 'draft', 'Content restored from archive');
+  }
+};
+
+// Audience & Contact Management API - Uses existing backend endpoints
+export const audienceApi = {
+  // Contact Management - using existing /api/v1/contacts endpoints
+  getContacts: async (advisorId: string = 'demo_advisor_001', searchTerm?: string, statusFilter?: string) => {
+    const params: any = { advisor_id: advisorId };
+    if (searchTerm) params.search = searchTerm;
+    if (statusFilter && statusFilter !== 'all') params.status = statusFilter;
+    
+    const response = await api.get('/contacts', { params });
+    return { contacts: response.data || [] };
+  },
+
+  createContact: async (contactData: {
+    advisorId: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    phone?: string;
+    company?: string;
+    title?: string;
+    status: string;
+    notes?: string;
+  }) => {
+    const response = await api.post('/contacts', {
+      advisor_id: contactData.advisorId,
+      first_name: contactData.firstName,
+      last_name: contactData.lastName,
+      email: contactData.email,
+      phone: contactData.phone,
+      company: contactData.company,
+      title: contactData.title,
+      status: contactData.status,
+      notes: contactData.notes
+    });
+    return response.data;
+  },
+
+  getContact: async (contactId: string, advisorId: string = 'demo_advisor_001') => {
+    const response = await api.get(`/contacts/${contactId}`, {
+      params: { advisor_id: advisorId }
+    });
+    return response.data;
+  },
+
+  updateContact: async (contactId: string, advisorId: string, contactData: any) => {
+    // Map frontend field names to backend field names
+    const mappedData = {
+      first_name: contactData.firstName,
+      last_name: contactData.lastName,
+      email: contactData.email,
+      phone: contactData.phone,
+      company: contactData.company,
+      title: contactData.title,
+      status: contactData.status,
+      notes: contactData.notes
+    };
+    
+    const response = await api.put(`/contacts/${contactId}`, mappedData, {
+      params: { advisor_id: advisorId }
+    });
+    return response.data;
+  },
+
+  deleteContact: async (contactId: string, advisorId: string = 'demo_advisor_001') => {
+    const response = await api.delete(`/contacts/${contactId}`, {
+      params: { advisor_id: advisorId }
+    });
+    return response.data;
+  },
+
+  // Audience Management - using existing /api/v1/audiences endpoints
+  getAudiences: async (advisorId: string = 'demo_advisor_001') => {
+    const response = await api.get('/audiences', {
+      params: { advisor_id: advisorId }
+    });
+    return { audiences: response.data || [] };
+  },
+
+  createAudience: async (audienceData: {
+    advisorId: string;
+    name: string;
+    description?: string;
+    characteristics?: string;
+    occupation?: string;
+    relationshipType?: string;
+  }) => {
+    const response = await api.post('/audiences', {
+      advisor_id: audienceData.advisorId,
+      name: audienceData.name,
+      description: audienceData.description,
+      characteristics: audienceData.characteristics,
+      occupation: audienceData.occupation,
+      relationship_type: audienceData.relationshipType
+    });
+    return response.data;
+  },
+
+  getAudience: async (audienceId: string, advisorId: string = 'demo_advisor_001') => {
+    const response = await api.get(`/audiences/${audienceId}`, {
+      params: { advisor_id: advisorId }
+    });
+    return response.data;
+  },
+
+  updateAudience: async (audienceId: string, advisorId: string, audienceData: any) => {
+    const response = await api.put(`/audiences/${audienceId}`, audienceData, {
+      params: { advisor_id: advisorId }
+    });
+    return response.data;
+  },
+
+  deleteAudience: async (audienceId: string, advisorId: string = 'demo_advisor_001') => {
+    const response = await api.delete(`/audiences/${audienceId}`, {
+      params: { advisor_id: advisorId }
+    });
+    return response.data;
+  },
+
+  // Statistics - using existing /api/v1/statistics endpoint
+  getAudienceStatistics: async (advisorId: string = 'demo_advisor_001') => {
+    const response = await api.get('/statistics', {
+      params: { advisor_id: advisorId }
+    });
+    return response.data;
   }
 };
 

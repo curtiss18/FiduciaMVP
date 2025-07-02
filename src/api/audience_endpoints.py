@@ -131,6 +131,7 @@ async def list_contacts(
     skip: int = Query(0, ge=0, description="Number of contacts to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Number of contacts to return"),
     search: Optional[str] = Query(None, description="Search in name, company, or email"),
+    status: Optional[str] = Query(None, description="Filter by contact status"),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -140,6 +141,7 @@ async def list_contacts(
     - **skip**: Pagination offset
     - **limit**: Maximum number of contacts to return
     - **search**: Search term for filtering contacts
+    - **status**: Filter by contact status (prospect, client, referral_source)
     """
     try:
         # Test basic database connection first
@@ -158,6 +160,9 @@ async def list_contacts(
                 (AdvisorContact.company.ilike(search_term)) |
                 (AdvisorContact.email.ilike(search_term))
             )
+        
+        if status:
+            query = query.where(AdvisorContact.status == status)
         
         query = query.offset(skip).limit(limit).order_by(AdvisorContact.last_name, AdvisorContact.first_name)
         

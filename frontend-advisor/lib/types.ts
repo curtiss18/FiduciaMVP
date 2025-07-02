@@ -158,3 +158,41 @@ export interface AdvisorStatistics {
   content_by_type: Record<string, number>
   recent_activity_count: number
 }
+
+// Audience Management Types - matching backend API responses
+export interface Contact {
+  id: number  // Backend uses int IDs
+  advisor_id: string
+  first_name: string
+  last_name: string
+  email?: string
+  phone?: string
+  company?: string
+  title?: string
+  status: string  // Backend uses string, not enum
+  notes?: string
+  created_at: string  // ISO datetime string
+  updated_at: string
+}
+
+export interface Audience {
+  id: number  // Backend uses int IDs
+  advisor_id: string
+  name: string
+  description?: string
+  characteristics?: string
+  occupation?: string
+  relationship_type?: string
+  contact_count?: number  // From backend response
+  created_at: string
+  updated_at: string
+  contacts?: Contact[]  // When populated with contacts
+}
+
+export interface AudienceStatistics {
+  advisor_id: string
+  total_contacts: number
+  total_audiences: number
+  total_relationships: number
+  avg_contacts_per_audience: number
+}
