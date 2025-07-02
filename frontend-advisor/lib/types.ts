@@ -141,7 +141,7 @@ export interface AdvisorContent {
   content_text: string
   content_type: string
   audience_type: string
-  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'distributed'
+  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'distributed' | 'archived'
   source_session_id?: string
   source_message_id?: string
   advisor_notes?: string

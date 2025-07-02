@@ -6,7 +6,7 @@ import { AdvisorContent } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Copy, Send, Search, Filter, Calendar, User, RefreshCw, Edit } from 'lucide-react'
+import { Copy, Send, Search, Filter, Calendar, User, RefreshCw, Edit, Archive, RotateCcw, AlertTriangle, X } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
@@ -17,13 +17,23 @@ export const ContentLibrary: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [typeFilter, setTypeFilter] = useState<string>('all')
+  const [itemToArchive, setItemToArchive] = useState<string | null>(null) // Store item ID instead of full item
   const advisorId = 'demo_advisor_001'
 
   // Fetch content from API
   const fetchContent = async () => {
     setIsLoading(true)
     try {
-      const response = await advisorApi.getContentLibrary(advisorId)
+      // Build filters object
+      const filters: any = {}
+      if (statusFilter && statusFilter !== 'all') {
+        filters.status = statusFilter
+      }
+      if (typeFilter && typeFilter !== 'all') {
+        filters.content_type = typeFilter
+      }
+
+      const response = await advisorApi.getContentLibrary(advisorId, filters)
       console.log('Content library response:', response)
       setContent(response.content || [])
       setFilteredContent(response.content || [])
@@ -36,11 +46,11 @@ export const ContentLibrary: React.FC = () => {
     }
   }
 
-  // Filter content based on search and filters
+  // Filter content based on search (other filters handled by backend)
   useEffect(() => {
     let filtered = content
 
-    // Search filter
+    // Search filter (only client-side filtering needed)
     if (searchQuery.trim()) {
       filtered = filtered.filter(item =>
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -49,23 +59,13 @@ export const ContentLibrary: React.FC = () => {
       )
     }
 
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(item => item.status === statusFilter)
-    }
-
-    // Type filter
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(item => item.content_type === typeFilter)
-    }
-
     setFilteredContent(filtered)
-  }, [content, searchQuery, statusFilter, typeFilter])
+  }, [content, searchQuery])
 
-  // Load content on mount
+  // Load content on mount and when filters change
   useEffect(() => {
     fetchContent()
-  }, [])
+  }, [statusFilter, typeFilter])
 
   // Handle copy content
   const handleCopyContent = async (item: AdvisorContent) => {
@@ -142,6 +142,41 @@ export const ContentLibrary: React.FC = () => {
     }
   }
 
+  // Handle archive content - show inline confirmation
+  const handleArchiveContent = async (item: AdvisorContent) => {
+    setItemToArchive(item.id)
+  }
+
+  // Confirm archive action
+  const confirmArchive = async (itemId: string) => {
+    try {
+      await advisorApi.archiveContent(itemId, advisorId)
+      console.log('Content archived')
+      setItemToArchive(null)
+      // Refresh content to show updated status
+      fetchContent()
+    } catch (error) {
+      console.error('Failed to archive content:', error)
+    }
+  }
+
+  // Cancel archive action
+  const cancelArchive = () => {
+    setItemToArchive(null)
+  }
+
+  // Handle restore content
+  const handleRestoreContent = async (item: AdvisorContent) => {
+    try {
+      await advisorApi.restoreContent(item.id, advisorId)
+      console.log('Content restored')
+      // Refresh content to show updated status
+      fetchContent()
+    } catch (error) {
+      console.error('Failed to restore content:', error)
+    }
+  }
+
   // Get status badge styling
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -164,6 +199,10 @@ export const ContentLibrary: React.FC = () => {
       distributed: { 
         className: 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800', 
         label: 'Published' 
+      },
+      archived: { 
+        className: 'bg-gray-50 text-gray-700 border border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800', 
+        label: 'Archived' 
       }
     }
     return statusConfig[status as keyof typeof statusConfig] || { 
@@ -272,6 +311,7 @@ export const ContentLibrary: React.FC = () => {
               <option value="approved">Approved</option>
               <option value="rejected">Needs Revision</option>
               <option value="distributed">Published</option>
+              <option value="archived">Archived</option>
             </select>
 
             <select 
@@ -320,105 +360,189 @@ export const ContentLibrary: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredContent.map((item) => {
               const statusBadge = getStatusBadge(item.status)
+              const isArchiveConfirm = itemToArchive === item.id
+              
               return (
-                <Card key={item.id} className="flex flex-col hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-2 w-full">
-                      <span className="text-lg">{getPlatformIcon(item.intended_channels, item)}</span>
-                      <h3 className="font-semibold truncate text-sm flex-1">{item.title}</h3>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>{getContentTypeDisplay(item.content_type)}</span>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {formatDate(item.created_at)}
-                        </span>
-                      </div>
-                      <span className={cn(
-                        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium gap-1.5 whitespace-nowrap flex-shrink-0",
-                        statusBadge.className
-                      )}>
-                        {/* Status indicator dot */}
-                        <span className={cn(
-                          "w-1.5 h-1.5 rounded-full flex-shrink-0",
-                          item.status === 'draft' && "bg-slate-400 dark:bg-slate-500",
-                          item.status === 'submitted' && "bg-amber-500 animate-pulse",
-                          item.status === 'approved' && "bg-emerald-500",
-                          item.status === 'rejected' && "bg-red-500",
-                          item.status === 'distributed' && "bg-blue-500"
-                        )} />
-                        {statusBadge.label}
-                      </span>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="flex-1 pb-3">
-                    {item.source_metadata?.isWarrenSession ? (
-                      // Special display for Warren sessions
-                      <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">
-                          💬 {item.source_metadata?.messageCount || 0} messages
-                          {item.source_metadata?.hasGeneratedContent && ' • Content generated'}
-                        </p>
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          Warren chat session - Click "Resume Chat" to continue the conversation
-                        </p>
-                      </div>
-                    ) : (
-                      // Regular content preview
-                      <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                        {item.content_text}
-                      </p>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                      {item.source_metadata?.isWarrenSession ? (
-                        // Special actions for Warren sessions
-                        <>
-                          <Button variant="outline" size="sm" onClick={() => handleResumeSession(item)}>
-                            <Edit className="h-3 w-3 mr-1" />
-                            Resume Chat
+                <Card key={item.id} className={cn(
+                  "flex flex-col hover:shadow-md transition-shadow",
+                  item.status === 'archived' && "opacity-75",
+                  isArchiveConfirm && "border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-700"
+                )}>
+                  {isArchiveConfirm ? (
+                    // Archive confirmation interface
+                    <>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center gap-2 w-full">
+                          <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                          <h3 className="font-semibold text-sm flex-1">Archive Content</h3>
+                          <Button variant="ghost" size="sm" onClick={cancelArchive}>
+                            <X className="h-4 w-4" />
                           </Button>
-                          {item.status === 'draft' && (
-                            <Button variant="outline" size="sm" onClick={() => handleSubmitForReview(item)}>
-                              <Send className="h-3 w-3 mr-1" />
-                              Archive
-                            </Button>
-                          )}
-                        </>
-                      ) : (
-                        // Regular content actions
-                        <>
-                          <Button variant="outline" size="sm" onClick={() => handleCopyContent(item)}>
-                            <Copy className="h-3 w-3 mr-1" />
-                            Copy
+                        </div>
+                      </CardHeader>
+                      <CardContent className="flex-1 pb-3">
+                        <p className="text-sm text-muted-foreground mb-4">
+                          This action will set the status to archived. The content will be removed from your active library but can be restored by filtering for content with the archived status.
+                        </p>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={cancelArchive}>
+                            Cancel
                           </Button>
-                          
-                          {item.status === 'draft' && (
+                          <Button variant="default" size="sm" onClick={() => confirmArchive(item.id)}>
+                            <Archive className="h-3 w-3 mr-1" />
+                            Archive
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </>
+                  ) : (
+                    // Normal card content
+                    <>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center gap-2 w-full">
+                          <span className="text-lg">{getPlatformIcon(item.intended_channels, item)}</span>
+                          <h3 className="font-semibold truncate text-sm flex-1">{item.title}</h3>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>{getContentTypeDisplay(item.content_type)}</span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatDate(item.created_at)}
+                            </span>
+                          </div>
+                          <span className={cn(
+                            "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium gap-1.5 whitespace-nowrap flex-shrink-0",
+                            statusBadge.className
+                          )}>
+                            {/* Status indicator dot */}
+                            <span className={cn(
+                              "w-1.5 h-1.5 rounded-full flex-shrink-0",
+                              item.status === 'draft' && "bg-slate-400 dark:bg-slate-500",
+                              item.status === 'submitted' && "bg-amber-500 animate-pulse",
+                              item.status === 'approved' && "bg-emerald-500",
+                              item.status === 'rejected' && "bg-red-500",
+                              item.status === 'distributed' && "bg-blue-500",
+                              item.status === 'archived' && "bg-gray-400 dark:bg-gray-600"
+                            )} />
+                            {statusBadge.label}
+                          </span>
+                        </div>
+                      </CardHeader>
+
+                      <CardContent className="flex-1 pb-3">
+                        {item.source_metadata?.isWarrenSession ? (
+                          // Special display for Warren sessions
+                          <div className="space-y-2">
+                            <p className="text-sm text-muted-foreground">
+                              💬 {item.source_metadata?.messageCount || 0} messages
+                              {item.source_metadata?.hasGeneratedContent && ' • Content generated'}
+                            </p>
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              Warren chat session - Click "Resume Chat" to continue the conversation
+                            </p>
+                          </div>
+                        ) : (
+                          // Regular content preview
+                          <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+                            {item.content_text}
+                          </p>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex gap-2">
+                          {item.source_metadata?.isWarrenSession ? (
+                            // Special actions for Warren sessions
                             <>
-                              <Button variant="outline" size="sm" onClick={() => handleEditInWarren(item)}>
-                                <Edit className="h-3 w-3 mr-1" />
-                                Edit
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={() => handleSubmitForReview(item)}>
-                                <Send className="h-3 w-3 mr-1" />
-                                Submit
-                              </Button>
+                              {item.status === 'archived' ? (
+                                // Archived Warren session - only restore
+                                <Button variant="outline" size="sm" onClick={() => handleRestoreContent(item)}>
+                                  <RotateCcw className="h-3 w-3 mr-1" />
+                                  Restore
+                                </Button>
+                              ) : (
+                                // Active Warren session - normal actions + archive
+                                <>
+                                  <Button variant="outline" size="sm" onClick={() => handleResumeSession(item)}>
+                                    <Edit className="h-3 w-3 mr-1" />
+                                    Resume Chat
+                                  </Button>
+                                  {item.status === 'draft' && (
+                                    <>
+                                      <Button variant="outline" size="sm" onClick={() => handleSubmitForReview(item)}>
+                                        <Send className="h-3 w-3 mr-1" />
+                                        Submit
+                                      </Button>
+                                      <Button variant="outline" size="sm" onClick={() => handleArchiveContent(item)}>
+                                        <Archive className="h-3 w-3 mr-1" />
+                                        Archive
+                                      </Button>
+                                    </>
+                                  )}
+                                </>
+                              )}
+                            </>
+                          ) : (
+                            // Regular content actions
+                            <>
+                              {item.status === 'archived' ? (
+                                // Archived content - only restore
+                                <Button variant="outline" size="sm" onClick={() => handleRestoreContent(item)}>
+                                  <RotateCcw className="h-3 w-3 mr-1" />
+                                  Restore
+                                </Button>
+                              ) : (
+                                // Active content - normal actions + archive
+                                <>
+                                  <Button variant="outline" size="sm" onClick={() => handleCopyContent(item)}>
+                                    <Copy className="h-3 w-3 mr-1" />
+                                    Copy
+                                  </Button>
+                                  
+                                  {item.status === 'draft' && (
+                                    <>
+                                      <Button variant="outline" size="sm" onClick={() => handleEditInWarren(item)}>
+                                        <Edit className="h-3 w-3 mr-1" />
+                                        Edit
+                                      </Button>
+                                      <Button variant="outline" size="sm" onClick={() => handleSubmitForReview(item)}>
+                                        <Send className="h-3 w-3 mr-1" />
+                                        Submit
+                                      </Button>
+                                      <Button variant="outline" size="sm" onClick={() => handleArchiveContent(item)}>
+                                        <Archive className="h-3 w-3 mr-1" />
+                                        Archive
+                                      </Button>
+                                    </>
+                                  )}
+                                  
+                                  {item.status === 'approved' && (
+                                    <>
+                                      <Button variant="default" size="sm">
+                                        <Send className="h-3 w-3 mr-1" />
+                                        Distribute
+                                      </Button>
+                                      <Button variant="outline" size="sm" onClick={() => handleArchiveContent(item)}>
+                                        <Archive className="h-3 w-3 mr-1" />
+                                        Archive
+                                      </Button>
+                                    </>
+                                  )}
+
+                                  {(item.status === 'submitted' || item.status === 'rejected' || item.status === 'distributed') && (
+                                    <Button variant="outline" size="sm" onClick={() => handleArchiveContent(item)}>
+                                      <Archive className="h-3 w-3 mr-1" />
+                                      Archive
+                                    </Button>
+                                  )}
+                                </>
+                              )}
                             </>
                           )}
-                          
-                          {item.status === 'approved' && (
-                            <Button variant="default" size="sm">
-                              <Send className="h-3 w-3 mr-1" />
-                              Distribute
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </CardContent>
+                        </div>
+                      </CardContent>
+                    </>
+                  )}
                 </Card>
               )
             })}

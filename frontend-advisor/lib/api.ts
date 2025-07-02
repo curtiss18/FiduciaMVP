@@ -167,6 +167,15 @@ export const advisorApi = {
       params: { advisor_id: advisorId }
     });
     return response.data;
+  },
+
+  // Archive/Restore functionality
+  archiveContent: async (contentId: string, advisorId: string) => {
+    return advisorApi.updateContentStatus(contentId, advisorId, 'archived', 'Content archived by user');
+  },
+
+  restoreContent: async (contentId: string, advisorId: string) => {
+    return advisorApi.updateContentStatus(contentId, advisorId, 'draft', 'Content restored from archive');
   }
 };
 

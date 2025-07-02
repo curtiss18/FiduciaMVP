@@ -308,9 +308,25 @@ class AdvisorWorkflowService:
                     AdvisorContent.advisor_id == advisor_id
                 )
                 
+                # Filter logic
                 if status_filter:
-                    status_enum = ContentStatus(status_filter.lower())
-                    query = query.where(AdvisorContent.status == status_enum)
+                    # If specific status requested, show only that status
+                    print(f"DEBUG: Filtering by status: {status_filter}")
+                    try:
+                        # Try both the raw value and lowercase
+                        if status_filter.lower() == 'archived':
+                            query = query.where(AdvisorContent.status == 'archived')
+                        else:
+                            status_enum = ContentStatus(status_filter.lower())
+                            query = query.where(AdvisorContent.status == status_enum.value)
+                        print(f"DEBUG: Status filter applied successfully")
+                    except ValueError as e:
+                        print(f"DEBUG: Status enum error: {e}")
+                        # Fallback to raw string comparison
+                        query = query.where(AdvisorContent.status == status_filter.lower())
+                else:
+                    # Default: exclude archived content from results
+                    query = query.where(AdvisorContent.status != ContentStatus.ARCHIVED.value)
                 
                 if content_type_filter:
                     content_type_enum = ContentType(content_type_filter.lower())
@@ -324,12 +340,26 @@ class AdvisorWorkflowService:
                 )
                 content_items = result.scalars().all()
                 
-                # Get total count
+                # Get total count with same filtering logic
                 count_query = select(func.count(AdvisorContent.id)).where(
                     AdvisorContent.advisor_id == advisor_id
                 )
+                
                 if status_filter:
-                    count_query = count_query.where(AdvisorContent.status == ContentStatus(status_filter.lower()))
+                    # If specific status requested, count only that status
+                    print(f"DEBUG: Count filtering by status: {status_filter}")
+                    try:
+                        if status_filter.lower() == 'archived':
+                            count_query = count_query.where(AdvisorContent.status == 'archived')
+                        else:
+                            count_query = count_query.where(AdvisorContent.status == ContentStatus(status_filter.lower()).value)
+                    except ValueError:
+                        # Fallback to raw string comparison
+                        count_query = count_query.where(AdvisorContent.status == status_filter.lower())
+                else:
+                    # Default: exclude archived content from count
+                    count_query = count_query.where(AdvisorContent.status != ContentStatus.ARCHIVED.value)
+                    
                 if content_type_filter:
                     count_query = count_query.where(AdvisorContent.content_type == ContentType(content_type_filter.lower()))
                 

@@ -15,10 +15,37 @@ FiduciaMVP solves a critical problem in financial services: creating compliant m
 
 ## 🚀 **Revolutionary Features**
 
-### **Complete Database Integration** 🆕
+# FiduciaMVP - AI Financial Compliance Platform
+
+> **AI-Powered Financial Compliance Content Generation Platform**  
+> **World's First Complete Archive/Restore System with Inline UX**
+
+An enterprise-grade SaaS platform that generates SEC/FINRA-compliant marketing content for financial advisors using advanced semantic search, context-aware AI technology, and revolutionary archive/restore capabilities with professional inline confirmation UX.
+
+## 🎯 **What is FiduciaMVP?**
+
+FiduciaMVP solves a critical problem in financial services: creating compliant marketing content is expensive and time-consuming. Financial advisors typically pay $8K-$15K/month for compliance experts, while our platform provides automated compliance at $99-$599/month - saving customers $120K-$250K annually.
+
+**Revolutionary Feature**: The world's first AI system with complete archive/restore functionality featuring elegant inline confirmation UX, showing users exactly how many compliance sources informed their content generation while providing professional content lifecycle management.
+
+**Built for**: Investment Advisor Representatives (IARs), Registered Investment Advisors (RIAs), and financial services firms requiring SEC/FINRA-compliant marketing content with complete audit trail capabilities.
+
+## 🚀 **Revolutionary Features**
+
+### **Complete Archive/Restore System with Inline UX** 🆕
+- **Status-Based Architecture**: Elegant archive system using existing status infrastructure
+- **Inline Confirmation Cards**: Revolutionary amber-tinted confirmation replacing modal overlays
+- **Professional Visual Design**: Warning icons with clear messaging and cancel/confirm options
+- **Smart Backend Filtering**: Archived content excluded from default views, viewable on demand
+- **One-Click Restore**: Seamless restoration from archived status back to draft
+- **Zero Data Loss**: Soft delete approach maintains all content for compliance requirements
+- **Complete Audit Trail**: All archive/restore actions logged for regulatory compliance
+
+### **Complete Database Integration**
 - **Production-Ready Content API**: All 29 marketing content records accessible via REST API
+- **Archive Status Support**: PostgreSQL contentstatus enum includes "archived" value
 - **Perfect Enum Synchronization**: SQLAlchemy and PostgreSQL enum types perfectly aligned
-- **Multi-Filter Support**: Content filtering by type, audience, approval status, and source type
+- **Multi-Filter Support**: Content filtering by type, audience, approval status, and archive status
 - **Sub-Second Performance**: Optimized API response times with proper database indexing
 - **Data Integrity**: Complete audit trail and transaction logging for regulatory compliance
 - **Scalable Architecture**: Ready for thousands of concurrent advisor operations
@@ -39,15 +66,15 @@ FiduciaMVP solves a critical problem in financial services: creating compliant m
 - **Intelligent Content Lifecycle**: Warren understands when you're creating vs. improving content
 - **Compliance-First**: Built-in SEC/FINRA expertise with automatic disclaimers
 
-### **Professional Advisor Portal with Complete Navigation**
-- **Collapsible Sidebar Navigation**: Professional navigation with 64px collapsed / 240px expanded states
-- **Mobile Responsive Design**: Full mobile navigation with overlay sidebar and hamburger menu
-- **Unified Header System**: Single PageHeader component across all pages with profile management
-- **Professional Profile Dropdown**: Avatar with theme toggle and settings integration
-- **Consistent Empty States**: Perfectly aligned empty states guiding users to content creation
-- **Warren Chat Interface**: Split-screen chat with Warren + content preview with source transparency
-- **Content Library Foundation**: Professional content management interface ready for API integration
-- **Analytics Dashboard**: Business intelligence interface ready for real usage metrics
+### **Professional Advisor Portal with Complete Workflow**
+- **Complete Session Management**: Warren chat sessions with archive/restore capabilities
+- **Inline Archive Confirmation**: Professional UX with amber-tinted confirmation cards
+- **Content Library Management**: Organize, filter, and manage all content including archived items
+- **Status Filtering**: View active content by default, archived content on demand
+- **Session Resume**: Complete conversation restoration from library
+- **Mobile Responsive Design**: Full mobile navigation with overlay sidebar
+- **Professional Profile Management**: Avatar with theme toggle and settings integration
+- **Real-time Source Display**: Live compliance source tracking during content generation
 
 ### **Enterprise Admin Portal**
 - **Complete Content Management**: Vector search database management with visual change tracking
@@ -101,31 +128,45 @@ cd frontend-advisor && npm install && npm run dev
 
 ## 🧪 **Test the Complete Production System**
 
-### **Experience the Production-Ready Content API** 🆕
+### **Archive/Restore System Test** 🆕
+
+1. **Open Advisor Portal**: http://localhost:3002
+2. **Create Content**: Use Warren to generate compliant marketing content
+3. **Test Archive**: Click "Archive" button → See elegant inline confirmation card
+4. **Confirm Archive**: Click "Archive" in confirmation → Content disappears from default view  
+5. **View Archived**: Select "Archived" from status dropdown → See archived content with restore buttons
+6. **Test Restore**: Click "Restore" → Content returns to draft status in main library
+7. **Verify Counts**: Notice archived content excluded from total counts
+
+### **Warren AI & Source Transparency Test**
+
+1. **Start Warren Chat**: Professional split-screen interface with Warren AI
+2. **Generate Content**: "Create a LinkedIn post about retirement planning"
+3. **See Source Transparency**: **📚 6 sources** **💼 3 examples** **🛡️ 3 rules** **🔵 VECTOR**
+4. **Save Session**: Click "Save Session" → Session saved to content library
+5. **Test Archive**: Archive Warren sessions just like any other content
+6. **Resume Later**: Go to Library → Click "Resume Chat" → Complete conversation restored
+
+### **Production-Ready Content API Test**
 
 1. **Test Content Retrieval**: 
    ```bash
    # Get all 29 marketing content records
    curl "http://localhost:8000/api/v1/content?limit=5"
    
-   # Filter by content type
-   curl "http://localhost:8000/api/v1/content?content_type=linkedin_post"
+   # Filter by content type including archived
+   curl "http://localhost:8000/api/v1/advisor/content/library?advisor_id=demo_advisor_001&status=archived"
    
-   # Get specific content by ID
-   curl "http://localhost:8000/api/v1/content/1"
+   # Test archive functionality
+   curl -X PUT "http://localhost:8000/api/v1/advisor/content/1/status" -d '{"new_status": "archived"}'
    ```
 
 2. **Verify Database Integration**:
    - ✅ **29 Marketing Content Records**: LinkedIn examples + disclaimer templates
-   - ✅ **Perfect Enum Handling**: LINKEDIN_POST, EMAIL_TEMPLATE, etc.
-   - ✅ **Multi-Filter Support**: Filter by type, audience, status
-   - ✅ **Sub-Second Performance**: Optimized database queries
-
-## 🧪 **Test the Complete Professional Platform**
-
-### **Experience the Professional Advisor Portal**
-
-1. **Visit Advisor Portal**: http://localhost:3002
+   - ✅ **Archive Status Support**: PostgreSQL contentstatus enum includes "archived"
+   - ✅ **Perfect Enum Handling**: LINKEDIN_POST, EMAIL_TEMPLATE, ARCHIVED, etc.
+   - ✅ **Multi-Filter Support**: Filter by type, audience, status including archive filtering
+   - ✅ **Sub-Second Performance**: Optimized database queries with archive support
 2. **Navigate the Interface**: 
    - Professional collapsible sidebar with Warren, Library, Analytics, Settings
    - Click profile avatar to access theme toggle and settings

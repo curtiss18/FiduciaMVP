@@ -26,6 +26,7 @@ class ContentStatus(enum.Enum):
     APPROVED = "approved"             # Ready to distribute
     REJECTED = "rejected"             # Compliance rejected
     DISTRIBUTED = "distributed"       # Posted to channels
+    ARCHIVED = "archived"             # Removed from active library
 
 class ReviewDecision(enum.Enum):
     """Compliance officer review decisions"""
