@@ -183,3 +183,35 @@ class ConversationContext(Base):
     # Timestamps
     created_at = Column(DateTime(timezone=True), default=func.now())
     expires_at = Column(DateTime(timezone=True), nullable=True)  # Optional expiration for cleanup
+
+
+class SessionDocuments(Base):
+    """Documents uploaded by advisors for Warren context (SCRUM-33)"""
+    __tablename__ = "session_documents"
+    
+    id = Column(String(50), primary_key=True, index=True)  # UUID as string for consistency
+    session_id = Column(String(100), ForeignKey('advisor_sessions.session_id'), nullable=False, index=True)
+    
+    # Document metadata
+    title = Column(String(500), nullable=False)
+    content_type = Column(String(100), nullable=False, index=True)  # 'pdf', 'docx', 'txt', 'video_transcript'
+    original_filename = Column(String(255), nullable=True)
+    file_size_bytes = Column(Integer, nullable=True)
+    
+    # Document content
+    full_content = Column(Text, nullable=False)  # Complete extracted text
+    summary = Column(Text, nullable=True)  # AI-generated summary (~800 tokens)
+    word_count = Column(Integer, nullable=False)
+    
+    # Processing metadata
+    document_metadata = Column(Text, nullable=True)  # JSON metadata (extraction info, themes, etc.)
+    processing_status = Column(String(20), default="pending", index=True)  # 'pending', 'processed', 'failed'
+    processing_error = Column(Text, nullable=True)  # Error details if processing failed
+    
+    # Context usage tracking
+    times_referenced = Column(Integer, default=0)  # How often Warren used this document
+    last_referenced_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
