@@ -10,6 +10,7 @@ export interface Message {
     audience?: string
     platform?: string
     isGenerating?: boolean
+    isAudienceChange?: boolean // Flag for audience selection messages
   }
 }
 

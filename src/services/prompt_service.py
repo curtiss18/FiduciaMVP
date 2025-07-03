@@ -197,7 +197,7 @@ Always wrap your final content in ##MARKETINGCONTENT## delimiters."""
         Apply dynamic context to prompts (template replacement, etc.).
         
         This can be expanded to include platform-specific guidance,
-        content type variations, etc.
+        content type variations, audience targeting, etc.
         """
         # Add platform-specific guidance
         platform = context.get('platform', '').lower()
@@ -212,6 +212,13 @@ Always wrap your final content in ##MARKETINGCONTENT## delimiters."""
             content_guidance = self._get_content_type_guidance(content_type)
             if content_guidance:
                 prompt += f"\n\nCONTENT TYPE GUIDANCE:\n{content_guidance}"
+        
+        # NEW: Add audience-specific targeting and guidance
+        audience_context = context.get('audience_context')
+        if audience_context:
+            audience_guidance = self._get_audience_guidance(audience_context)
+            if audience_guidance:
+                prompt += f"\n\n{audience_guidance}"
         
         return prompt
     
@@ -268,6 +275,181 @@ Always wrap your final content in ##MARKETINGCONTENT## delimiters."""
         }
         
         return content_guides.get(content_type, "")
+    
+    def _get_audience_guidance(self, audience_context: Dict) -> str:
+        """
+        Generate comprehensive audience-specific guidance for content generation.
+        
+        Creates detailed audience personas and targeting instructions based on:
+        - Audience name and occupation
+        - Relationship type and characteristics  
+        - Contact count and engagement context
+        - Industry-specific compliance considerations
+        """
+        if not audience_context:
+            return ""
+        
+        audience_name = audience_context.get('name', 'Unknown Audience')
+        occupation = audience_context.get('occupation', '')
+        relationship_type = audience_context.get('relationship_type', '')
+        characteristics = audience_context.get('characteristics', '')
+        contact_count = audience_context.get('contact_count', 0)
+        
+        # Build comprehensive audience targeting guidance
+        guidance_parts = [
+            "TARGET AUDIENCE CONTEXT:",
+            f"- Audience: {audience_name} ({contact_count} contacts)",
+        ]
+        
+        if occupation:
+            guidance_parts.append(f"- Occupation/Industry: {occupation}")
+            
+        if relationship_type:
+            guidance_parts.append(f"- Relationship Type: {relationship_type}")
+            
+        if characteristics:
+            guidance_parts.append(f"- Audience Characteristics: {characteristics}")
+        
+        # Add detailed audience-specific guidance
+        guidance_parts.extend([
+            "",
+            "AUDIENCE-SPECIFIC CONTENT STRATEGY:",
+        ])
+        
+        # Generate occupation-specific guidance
+        occupation_guidance = self._get_occupation_specific_guidance(occupation.lower() if occupation else '')
+        if occupation_guidance:
+            guidance_parts.extend(occupation_guidance)
+        
+        # Generate relationship-specific guidance  
+        relationship_guidance = self._get_relationship_specific_guidance(relationship_type.lower() if relationship_type else '')
+        if relationship_guidance:
+            guidance_parts.extend(relationship_guidance)
+        
+        # Add audience scale context
+        scale_guidance = self._get_audience_scale_guidance(contact_count)
+        if scale_guidance:
+            guidance_parts.extend(scale_guidance)
+        
+        # Add general audience targeting principles
+        guidance_parts.extend([
+            "",
+            "AUDIENCE TARGETING PRINCIPLES:",
+            "- Tailor language, examples, and tone to resonate with this specific audience",
+            "- Reference industry-specific challenges and opportunities where relevant",
+            "- Use terminology and concepts familiar to this professional group",
+            "- Address common pain points and goals specific to this audience",
+            "- Maintain professional credibility appropriate for the relationship type",
+            "- Include audience-relevant compliance considerations and disclaimers"
+        ])
+        
+        return "\n".join(guidance_parts)
+    
+    def _get_occupation_specific_guidance(self, occupation: str) -> List[str]:
+        """Generate detailed guidance based on audience occupation/industry."""
+        occupation_guides = {
+            'doctors': [
+                "- Focus on time-efficient financial strategies suitable for busy medical professionals",
+                "- Address high-income tax planning challenges including student loan considerations", 
+                "- Reference medical practice ownership, malpractice insurance, and disability planning",
+                "- Use examples relevant to medical professionals (practice transitions, call schedules)",
+                "- Consider backdoor Roth strategies and other high-earner retirement planning tools",
+                "- Address work-life balance and long-term financial security for healthcare careers"
+            ],
+            'cpas': [
+                "- Use sophisticated financial terminology and assume high financial literacy",
+                "- Reference complex tax strategies, accounting principles, and regulatory changes",
+                "- Address business ownership, practice management, and succession planning",
+                "- Focus on tax-efficient investment strategies and retirement planning",
+                "- Consider seasonal income patterns and business cycle planning"
+            ],
+            'tech workers': [
+                "- Address stock options, RSUs, ESPP programs, and equity compensation strategies",
+                "- Focus on rapid career growth, job mobility, and industry volatility",
+                "- Reference cryptocurrency, emerging technologies, and innovation-focused investing",
+                "- Consider remote work implications, startup environments, and vesting schedules", 
+                "- Address early retirement goals (FIRE movement) and wealth acceleration strategies"
+            ],
+            'lawyers': [
+                "- Use precise legal terminology and assume understanding of regulatory frameworks",
+                "- Address partnership tracks, billable hour pressures, and career progression",
+                "- Reference professional liability, malpractice coverage, and business insurance",
+                "- Focus on tax strategies for high earners and business ownership structures"
+            ],
+            'teachers': [
+                "- Address public sector benefits, pension systems, and 403(b) planning",
+                "- Focus on budget-conscious strategies and modest income optimization",
+                "- Reference summer income gaps, continuing education costs, and supply expenses",
+                "- Consider Teacher Loan Forgiveness programs and education-specific benefits"
+            ]
+        }
+        
+        # Return guidance for exact match or partial matches
+        for key, guidance in occupation_guides.items():
+            if key in occupation or occupation in key:
+                return guidance
+        
+        # Generic professional guidance if no specific match
+        if occupation:
+            return [
+                f"- Tailor content to {occupation} professional context and industry challenges",
+                f"- Address career-specific financial planning considerations for {occupation}",
+                f"- Use examples and terminology relevant to the {occupation} industry"
+            ]
+        
+        return []
+    
+    def _get_relationship_specific_guidance(self, relationship_type: str) -> List[str]:
+        """Generate guidance based on advisor-audience relationship type."""
+        relationship_guides = {
+            'professional': [
+                "- Maintain formal, credible tone appropriate for professional referral relationships",
+                "- Focus on expertise demonstration and thought leadership content",
+                "- Use industry-specific examples and technical depth"
+            ],
+            'personal': [
+                "- Use warmer, more conversational tone while maintaining professionalism",
+                "- Include personal touches and relationship-building elements",
+                "- Address family-focused financial goals and lifestyle considerations"
+            ],
+            'church': [
+                "- Use respectful, values-based language that aligns with faith community",
+                "- Focus on stewardship principles and long-term security for family",
+                "- Address charitable giving strategies and values-based investing options"
+            ],
+            'community': [
+                "- Use inclusive, community-focused language and shared value references",
+                "- Address local community interests and shared experiences",
+                "- Focus on neighborhood, school district, or local business connections"
+            ]
+        }
+        
+        # Return guidance for exact match or partial matches
+        for key, guidance in relationship_guides.items():
+            if key in relationship_type or relationship_type in key:
+                return guidance
+        
+        return []
+    
+    def _get_audience_scale_guidance(self, contact_count: int) -> List[str]:
+        """Generate guidance based on audience size for appropriate targeting."""
+        if contact_count == 0:
+            return []
+        elif contact_count < 10:
+            return [
+                "- Use personalized, intimate tone appropriate for small, close-knit audience",
+                "- Consider individual recognition and personal relationship elements"
+            ]
+        elif contact_count < 50:
+            return [
+                "- Balance personal touch with broader appeal for medium-sized audience",
+                "- Consider segmentation opportunities within this audience group"
+            ]
+        else:
+            return [
+                "- Use scalable content approach suitable for larger audience engagement",
+                "- Focus on broad appeal while maintaining audience-specific targeting"
+            ]
     
     def _get_fallback_prompt(self, service: AIService, prompt_type: PromptType) -> str:
         """

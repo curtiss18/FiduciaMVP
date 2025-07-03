@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useState, useCallback, useEffect } from 'react'
-import { Message, Conversation, GeneratedContent, WarrenResponse, ExtractedContent, SourceInformation } from '@/lib/types'
+import { Message, Conversation, GeneratedContent, WarrenResponse, ExtractedContent, SourceInformation, Audience } from '@/lib/types'
 import { warrenChatApi, advisorApi } from '@/lib/api'
 import { PageHeader } from '@/components/layout'
 import { MessageHistory } from './MessageHistory'
 import { ChatInput } from './ChatInput'
+import { AudienceSelector } from './AudienceSelector'
 import { SourceInfoBadges } from '@/components/content'
 import { Button } from '@/components/ui/button'
 import { Copy, Save, Send } from 'lucide-react'
@@ -37,8 +38,36 @@ export const ChatInterface: React.FC = () => {
   const [chatWidth, setChatWidth] = useState(30) // Default: 30% chat, 70% content
   const [isResizing, setIsResizing] = useState(false)
 
+  // Audience targeting state
+  const [selectedAudience, setSelectedAudience] = useState<Audience | null>(null)
+
   // Generate unique message ID
   const generateMessageId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+  // Handle audience selection changes
+  const handleAudienceChange = (audience: Audience | null) => {
+    setSelectedAudience(audience)
+    
+    // Add Warren acknowledgment message
+    const acknowledgmentMessage: Message = {
+      id: generateMessageId(),
+      role: 'warren',
+      content: audience 
+        ? `I'll now tailor content specifically for your **${audience.name}** audience${audience.occupation ? ` (${audience.occupation})` : ''}. This helps me create more relevant and targeted content while maintaining full compliance.`
+        : `I've switched to general content targeting. I'll create content suitable for a broad audience while maintaining full compliance.`,
+      timestamp: new Date(),
+      type: 'text',
+      metadata: {
+        audience: audience?.name || 'General',
+        isAudienceChange: true
+      }
+    }
+
+    setConversation(prev => ({
+      ...prev,
+      messages: [...prev.messages, acknowledgmentMessage]
+    }))
+  }
 
   // Session management functions
   const ensureSession = async (): Promise<string> => {
@@ -187,7 +216,8 @@ export const ChatInterface: React.FC = () => {
         messages: cleanMessages, // Use cleaned messages
         generatedContent,
         createdAt: new Date().toISOString(),
-        extractedContent: bestContent // Store extracted content for easy access
+        extractedContent: bestContent, // Store extracted content for easy access
+        selectedAudience: selectedAudience // Include audience information
       }
 
       const contentData = {
@@ -195,15 +225,21 @@ export const ChatInterface: React.FC = () => {
         title: bestContent.title, // Use the best title
         contentText: bestContent.content, // Store the clean extracted content for display
         contentType: 'website_blog', // Use valid backend value - lowercase for advisor_content table
-        audienceType: 'general_education', // Use valid backend value - lowercase
+        audienceType: selectedAudience ? 'custom_audience' : 'general_education', // Reflect actual targeting
         sourceSessionId: advisorSession,
-        advisorNotes: `Warren chat session with ${conversation.messages.length} messages - Last updated: ${new Date().toLocaleString()}`,
+        advisorNotes: `Warren chat session with ${conversation.messages.length} messages${selectedAudience ? ` targeted for ${selectedAudience.name}` : ''} - Last updated: ${new Date().toLocaleString()}`,
         intendedChannels: ['warren_chat'],
         sourceMetadata: {
           sessionId: advisorSession,
           messageCount: conversation.messages.length,
           hasGeneratedContent: !!generatedContent,
           lastActivity: new Date().toISOString(),
+          selectedAudience: selectedAudience ? {
+            id: selectedAudience.id,
+            name: selectedAudience.name,
+            occupation: selectedAudience.occupation,
+            relationship_type: selectedAudience.relationship_type
+          } : null,
           isWarrenSession: true, // Flag to identify this as a session
           sessionData: JSON.stringify(sessionData), // Store full session data in metadata
           extractedContentType: bestContent.contentType,
@@ -376,7 +412,16 @@ export const ChatInterface: React.FC = () => {
         platform: conversation.context?.platform || generatedContent?.platform,
         current_content: currentContent,
         is_refinement: isRefinement,
-        youtube_url: youtubeUrl // Include YouTube URL in context
+        youtube_url: youtubeUrl, // Include YouTube URL in context
+        // Add selected audience information for targeting
+        selected_audience: selectedAudience ? {
+          id: selectedAudience.id,
+          name: selectedAudience.name,
+          occupation: selectedAudience.occupation,
+          relationship_type: selectedAudience.relationship_type,
+          characteristics: selectedAudience.characteristics,
+          contact_count: selectedAudience.contact_count
+        } : null
       }
 
       // 6. Call Warren API
@@ -478,6 +523,11 @@ export const ChatInterface: React.FC = () => {
   }
 
   const getAudienceLabel = (audience: string) => {
+    // If we have a selected audience, use its name instead
+    if (selectedAudience) {
+      return selectedAudience.name
+    }
+    // Fallback to old system for backward compatibility
     return audience.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
   }
 
@@ -896,6 +946,28 @@ export const ChatInterface: React.FC = () => {
         subtitle={sessionTitle || "Compliance-focused content assistant"}
       />
       
+      {/* Audience Selector Bar */}
+      <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6 py-3">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center gap-4">
+            <AudienceSelector 
+              selectedAudience={selectedAudience}
+              onAudienceChange={handleAudienceChange}
+              disabled={isLoading}
+            />
+            {selectedAudience && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>•</span>
+                <span>{selectedAudience.contact_count || 0} contacts</span>
+              </div>
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Target your content for specific audiences
+          </div>
+        </div>
+      </div>
+      
       {/* Main Content Area - Dynamic Layout with Resizer */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden resize-container">
         {/* Chat Panel - Mobile Bottom, Desktop Left */}
@@ -1021,7 +1093,7 @@ export const ChatInterface: React.FC = () => {
                       </h3>
                       <div className="space-y-1">
                         <div className="text-sm text-muted-foreground">
-                          {generatedContent.contentType} • {getAudienceLabel(generatedContent.audience)}
+                          {generatedContent.contentType} • {selectedAudience ? `Targeted for ${selectedAudience.name}` : getAudienceLabel(generatedContent.audience)}
                           {generatedContent.complianceScore && (
                             <span className="ml-2 text-green-600 dark:text-green-400">
                               • Compliance Score: {Math.round(generatedContent.complianceScore * 100)}%

@@ -292,6 +292,22 @@ async def warren_generate_content_v3(request: dict):
     # NEW: YouTube URL support
     youtube_url = request.get("youtube_url")
     
+    # NEW: Extract selected audience context for targeted content generation
+    selected_audience = request.get("selected_audience")
+    audience_context = None
+    if selected_audience:
+        audience_context = {
+            "id": selected_audience.get("id"),
+            "name": selected_audience.get("name"),
+            "occupation": selected_audience.get("occupation"),
+            "relationship_type": selected_audience.get("relationship_type"),
+            "characteristics": selected_audience.get("characteristics"),
+            "contact_count": selected_audience.get("contact_count", 0)
+        }
+        logger.info(f"Audience targeting enabled for: {audience_context['name']} ({audience_context['occupation']})")
+    else:
+        logger.info("General audience targeting - no specific audience selected")
+    
     if not user_request:
         return {"error": "Content request is required"}
     
@@ -347,7 +363,8 @@ async def warren_generate_content_v3(request: dict):
             session_id=session_id,
             current_content=current_content,
             is_refinement=is_refinement,
-            youtube_context=youtube_context  # NEW: Pass YouTube context
+            youtube_context=youtube_context,  # YouTube context support
+            audience_context=audience_context  # NEW: Pass audience context for targeting
         )
         
         # Add YouTube info to response if it was used
@@ -356,6 +373,20 @@ async def warren_generate_content_v3(request: dict):
                 "url": youtube_url,
                 "video_id": youtube_context["video_id"],
                 "transcript_stats": youtube_context["stats"]
+            }
+        
+        # Add audience targeting info to response
+        if audience_context:
+            result["audience_targeting"] = {
+                "audience_name": audience_context["name"],
+                "occupation": audience_context["occupation"],
+                "contact_count": audience_context["contact_count"],
+                "targeting_enabled": True
+            }
+        else:
+            result["audience_targeting"] = {
+                "targeting_enabled": False,
+                "default_targeting": "general"
             }
         
         return result

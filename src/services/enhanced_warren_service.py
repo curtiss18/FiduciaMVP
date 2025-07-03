@@ -39,10 +39,12 @@ class EnhancedWarrenService:
         session_id: Optional[str] = None,
         current_content: Optional[str] = None,
         is_refinement: bool = False,
-        youtube_context: Optional[Dict[str, Any]] = None
+        youtube_context: Optional[Dict[str, Any]] = None,
+        audience_context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Generate content using enhanced vector search with automatic fallbacks.
+        Now supports audience-targeted content generation.
         """
         try:
             # Convert string content type to enum if possible
@@ -77,7 +79,7 @@ class EnhancedWarrenService:
             # Generate content with Warren using the assembled context
             warren_content = await self._generate_with_enhanced_context(
                 context_data, user_request, content_type, audience_type, 
-                current_content, is_refinement, youtube_context
+                current_content, is_refinement, youtube_context, audience_context
             )
             
             return {
@@ -93,7 +95,9 @@ class EnhancedWarrenService:
                 "fallback_used": context_data.get("fallback_used", False),
                 "fallback_reason": context_data.get("fallback_reason"),
                 "context_quality_score": context_quality.get("score", 0.5),
-                "user_request": user_request
+                "user_request": user_request,
+                # NEW: Include audience context in source transparency
+                "audience_context_metadata": self._build_audience_metadata(audience_context)
             }
             
         except Exception as e:
@@ -293,9 +297,10 @@ class EnhancedWarrenService:
         audience_type: Optional[str],
         current_content: Optional[str] = None,
         is_refinement: bool = False,
-        youtube_context: Optional[Dict[str, Any]] = None
+        youtube_context: Optional[Dict[str, Any]] = None,
+        audience_context: Optional[Dict[str, Any]] = None
     ) -> str:
-        """Generate content using Warren with enhanced context and smart prompt selection."""
+        """Generate content using Warren with enhanced context, smart prompt selection, and audience targeting."""
         
         # Determine which prompt to use based on whether this is a refinement
         if is_refinement and current_content:
@@ -305,7 +310,8 @@ class EnhancedWarrenService:
                 'refinement_request': user_request,
                 'platform': self._extract_platform_from_content_type(content_type),
                 'content_type': content_type,
-                'audience_type': audience_type
+                'audience_type': audience_type,
+                'audience_context': audience_context  # Add audience context for refinement
             }
             
             base_system_prompt = prompt_service.get_warren_refinement_prompt(refinement_context)
@@ -328,7 +334,8 @@ Wrap your refined content in ##MARKETINGCONTENT## delimiters and explain your ch
             prompt_context = {
                 'platform': self._extract_platform_from_content_type(content_type),
                 'content_type': content_type,
-                'audience_type': audience_type
+                'audience_type': audience_type,
+                'audience_context': audience_context  # Add audience context for new content
             }
             
             base_system_prompt = prompt_service.get_warren_system_prompt(prompt_context)
@@ -430,6 +437,48 @@ Generate the content now:"""
             'blog_post': 'website'
         }
         return platform_mapping.get(content_type.lower(), 'general')
+    
+    def _build_audience_metadata(self, audience_context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Build audience metadata for source transparency and content tracking.
+        
+        Creates structured metadata about audience targeting that can be used for:
+        - Source transparency displays
+        - Content tracking and analytics
+        - Compliance audit trails
+        """
+        if not audience_context:
+            return {
+                "targeting_enabled": False,
+                "audience_type": "general",
+                "targeting_details": None
+            }
+        
+        return {
+            "targeting_enabled": True,
+            "audience_type": "custom",
+            "audience_name": audience_context.get("name", "Unknown Audience"),
+            "occupation": audience_context.get("occupation", ""),
+            "relationship_type": audience_context.get("relationship_type", ""),
+            "contact_count": audience_context.get("contact_count", 0),
+            "targeting_details": {
+                "has_occupation_targeting": bool(audience_context.get("occupation")),
+                "has_relationship_targeting": bool(audience_context.get("relationship_type")),
+                "has_characteristics": bool(audience_context.get("characteristics")),
+                "audience_scale": self._categorize_audience_scale(audience_context.get("contact_count", 0))
+            }
+        }
+    
+    def _categorize_audience_scale(self, contact_count: int) -> str:
+        """Categorize audience scale for metadata tracking."""
+        if contact_count == 0:
+            return "unknown"
+        elif contact_count < 10:
+            return "small"
+        elif contact_count < 50:
+            return "medium"
+        else:
+            return "large"
 
 
 # Service instance
