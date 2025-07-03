@@ -67,11 +67,43 @@ export const ContentLibrary: React.FC = () => {
     fetchContent()
   }, [statusFilter, typeFilter])
 
-  // Handle copy content
+  // Get display content for Warren sessions - handles both new and old formats
+  const getSessionDisplayContent = (item: AdvisorContent) => {
+    if (!item.source_metadata?.isWarrenSession) {
+      return item.content_text // Regular content
+    }
+
+    // For Warren sessions, show a description instead of raw content
+    const messageCount = item.source_metadata?.messageCount || 0
+    const hasContent = item.source_metadata?.hasGeneratedContent || false
+    
+    let description = `💬 Warren chat session with ${messageCount} messages`
+    if (hasContent) {
+      description += ' • Content generated'
+    }
+    
+    // If we have extracted content info, add it
+    if (item.source_metadata?.extractedContentType) {
+      const contentType = item.source_metadata.extractedContentType.replace(/_/g, ' ')
+      const platform = item.source_metadata?.extractedPlatform || 'general'
+      description += ` • ${contentType} for ${platform}`
+    }
+    
+    return description
+  }
+
+  // Handle copy content - special handling for Warren sessions
   const handleCopyContent = async (item: AdvisorContent) => {
     try {
-      await navigator.clipboard.writeText(item.content_text)
-      console.log('Content copied to clipboard')
+      if (item.source_metadata?.isWarrenSession) {
+        // For Warren sessions, copy the clean generated content if available
+        await navigator.clipboard.writeText(item.content_text)
+        console.log('Warren session content copied to clipboard')
+      } else {
+        // For regular content, copy as normal
+        await navigator.clipboard.writeText(item.content_text)
+        console.log('Content copied to clipboard')
+      }
     } catch (error) {
       console.error('Failed to copy content:', error)
     }
@@ -104,21 +136,52 @@ export const ContentLibrary: React.FC = () => {
   // Handle resuming Warren session - load entire chat history
   const handleResumeSession = async (item: AdvisorContent) => {
     try {
-      // Parse session data from content_text
-      const sessionData = JSON.parse(item.content_text)
-      
-      // Store session info for Warren to restore complete conversation
-      const sessionContext = {
-        isSessionResume: true,
-        sessionId: item.source_session_id,
-        contentId: item.id,
-        title: item.title,
-        messages: sessionData.messages || [],
-        generatedContent: sessionData.generatedContent,
-        createdAt: sessionData.createdAt
+      let sessionContext: any
+
+      if (item.source_metadata?.sessionData) {
+        // New format: session data is stored in metadata
+        const sessionData = JSON.parse(item.source_metadata.sessionData)
+        
+        sessionContext = {
+          isSessionResume: true,
+          sessionId: item.source_session_id,
+          contentId: item.id,
+          title: item.title,
+          messages: sessionData.messages || [],
+          generatedContent: sessionData.generatedContent,
+          createdAt: sessionData.createdAt,
+          extractedContent: sessionData.extractedContent
+        }
+      } else {
+        // Backward compatibility: try to parse old format from content_text
+        try {
+          const sessionData = JSON.parse(item.content_text)
+          
+          // Check if this looks like old session data (has messages array)
+          if (sessionData.messages && Array.isArray(sessionData.messages)) {
+            sessionContext = {
+              isSessionResume: true,
+              sessionId: item.source_session_id,
+              contentId: item.id,
+              title: item.title,
+              messages: sessionData.messages || [],
+              generatedContent: sessionData.generatedContent,
+              createdAt: sessionData.createdAt
+            }
+          } else {
+            // Not parseable as session data, fallback to edit mode
+            handleEditInWarren(item)
+            return
+          }
+        } catch (parseError) {
+          // Content text is not JSON, fallback to edit mode
+          console.log('Session data not parseable, falling back to edit mode:', parseError)
+          handleEditInWarren(item)
+          return
+        }
       }
       
-      // Store in sessionStorage for Warren to retrieve
+      // Store session info for Warren to restore complete conversation
       sessionStorage.setItem('warrenEditContext', JSON.stringify(sessionContext))
       
       // Navigate to Warren chat
@@ -432,14 +495,10 @@ export const ContentLibrary: React.FC = () => {
 
                       <CardContent className="flex-1 pb-3">
                         {item.source_metadata?.isWarrenSession ? (
-                          // Special display for Warren sessions
+                          // Special display for Warren sessions with enhanced description
                           <div className="space-y-2">
-                            <p className="text-sm text-muted-foreground">
-                              💬 {item.source_metadata?.messageCount || 0} messages
-                              {item.source_metadata?.hasGeneratedContent && ' • Content generated'}
-                            </p>
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              Warren chat session - Click "Resume Chat" to continue the conversation
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {getSessionDisplayContent(item)}
                             </p>
                           </div>
                         ) : (

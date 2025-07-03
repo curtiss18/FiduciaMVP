@@ -81,8 +81,14 @@ export const ChatInterface: React.FC = () => {
     }
   }
 
-  // Generate smart session title from Warren's first response
+  // Generate smart session title from Warren's first response or content
   const generateSessionTitle = (warrenResponse: string, userMessage: string): string => {
+    // First, try to extract title from delimited content
+    const extracted = parseWarrenResponse(warrenResponse)
+    if (extracted.hasMarketingContent && extracted.title && extracted.title.trim().length > 0) {
+      return extracted.title.trim()
+    }
+    
     // Try to extract meaningful title from Warren's response or user message
     const responseLines = warrenResponse.split('\n').filter(line => line.trim())
     const userWords = userMessage.toLowerCase()
@@ -100,7 +106,8 @@ export const ChatInterface: React.FC = () => {
       line.length > 10 && 
       !line.startsWith('I') && 
       !line.includes('Warren') &&
-      !line.includes('compliance')
+      !line.includes('compliance') &&
+      !line.includes('##MARKETINGCONTENT##')
     )
     
     if (meaningfulLine && meaningfulLine.length < 50) {
@@ -109,6 +116,49 @@ export const ChatInterface: React.FC = () => {
     
     // Fallback to date-based title
     return `Warren Chat - ${new Date().toLocaleDateString()}`
+  }
+
+  // Extract the best content for display and title from Warren session
+  const extractBestContentForSession = () => {
+    // Look for the latest generated content first
+    if (generatedContent?.content) {
+      return {
+        title: generatedContent.title || sessionTitle,
+        content: generatedContent.content,
+        contentType: generatedContent.contentType,
+        audience: generatedContent.audience,
+        platform: generatedContent.platform
+      }
+    }
+
+    // Fallback: Look for the last Warren message with marketing content
+    const warrenMessagesWithContent = conversation.messages
+      .filter(msg => msg.role === 'warren' && msg.content.includes('##MARKETINGCONTENT##'))
+      .reverse() // Start with most recent
+
+    if (warrenMessagesWithContent.length > 0) {
+      const latestMessage = warrenMessagesWithContent[0]
+      const extracted = parseWarrenResponse(latestMessage.content)
+      
+      if (extracted.hasMarketingContent && extracted.marketingContent) {
+        return {
+          title: extracted.title || sessionTitle,
+          content: extracted.marketingContent,
+          contentType: latestMessage.metadata?.contentType || 'general',
+          audience: latestMessage.metadata?.audience || 'general_education',
+          platform: latestMessage.metadata?.platform || 'general'
+        }
+      }
+    }
+
+    // Final fallback: Session summary
+    return {
+      title: sessionTitle,
+      content: `Warren chat session with ${conversation.messages.length} messages`,
+      contentType: 'general',
+      audience: 'general_education',
+      platform: 'warren_chat'
+    }
   }
 
   // Save session as content in library
@@ -129,28 +179,36 @@ export const ChatInterface: React.FC = () => {
         return msg
       })
 
+      // Extract the best content for display
+      const bestContent = extractBestContentForSession()
+
       const sessionData = {
-        title: sessionTitle,
+        title: bestContent.title,
         messages: cleanMessages, // Use cleaned messages
         generatedContent,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        extractedContent: bestContent // Store extracted content for easy access
       }
 
       const contentData = {
         advisorId,
-        title: sessionTitle,
-        contentText: JSON.stringify(sessionData), // Store session data as JSON
+        title: bestContent.title, // Use the best title
+        contentText: bestContent.content, // Store the clean extracted content for display
         contentType: 'website_blog', // Use valid backend value - lowercase for advisor_content table
         audienceType: 'general_education', // Use valid backend value - lowercase
         sourceSessionId: advisorSession,
-        advisorNotes: `Warren chat session with ${conversation.messages.length} messages - Session Data`,
+        advisorNotes: `Warren chat session with ${conversation.messages.length} messages - Last updated: ${new Date().toLocaleString()}`,
         intendedChannels: ['warren_chat'],
         sourceMetadata: {
           sessionId: advisorSession,
           messageCount: conversation.messages.length,
           hasGeneratedContent: !!generatedContent,
           lastActivity: new Date().toISOString(),
-          isWarrenSession: true // Flag to identify this as a session
+          isWarrenSession: true, // Flag to identify this as a session
+          sessionData: JSON.stringify(sessionData), // Store full session data in metadata
+          extractedContentType: bestContent.contentType,
+          extractedAudience: bestContent.audience,
+          extractedPlatform: bestContent.platform
         }
       }
 
@@ -161,8 +219,8 @@ export const ChatInterface: React.FC = () => {
         console.log('Updating existing session:', sessionContentId)
         
         const updateData = {
-          title: sessionTitle,
-          contentText: JSON.stringify(sessionData),
+          title: bestContent.title, // Use the best title
+          contentText: bestContent.content, // Store clean content for display
           advisorNotes: `Warren chat session with ${conversation.messages.length} messages - Updated: ${new Date().toLocaleString()}`
           // Note: sourceMetadata not included as advisor_content table doesn't have this column
         }
@@ -336,6 +394,10 @@ export const ChatInterface: React.FC = () => {
         if (!sessionTitle && conversation.messages.length <= 1) {
           const smartTitle = generateSessionTitle(response.content, userMessage)
           setSessionTitle(smartTitle)
+        } else if (extractedContent.hasMarketingContent && extractedContent.title && extractedContent.title !== sessionTitle) {
+          // Update session title if Warren generated content with a better title
+          const newTitle = extractedContent.title
+          setSessionTitle(newTitle)
         }
         
         // 9. Add Warren's conversational response to chat (without marketing content)
@@ -670,6 +732,18 @@ export const ChatInterface: React.FC = () => {
                 platform: context.generatedContent.platform || 'general',
                 complianceScore: context.generatedContent.complianceScore,
                 sourceInfo: context.generatedContent.sourceInfo
+              }
+              setGeneratedContent(restoredContent)
+            } else if (context.extractedContent) {
+              // Handle new format with extracted content
+              const restoredContent: GeneratedContent = {
+                title: context.extractedContent.title || 'Restored Content',
+                content: context.extractedContent.content || '',
+                contentType: context.extractedContent.contentType || 'general',
+                audience: context.extractedContent.audience || 'general_education',
+                platform: context.extractedContent.platform || 'general',
+                complianceScore: undefined,
+                sourceInfo: undefined
               }
               setGeneratedContent(restoredContent)
             }
