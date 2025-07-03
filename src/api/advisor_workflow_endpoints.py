@@ -328,17 +328,43 @@ async def upload_file_with_processing(
             session_id=session_id
         )
         
+        # Generate AI summary automatically (SCRUM-41 Phase 1.3)
+        summary_success = False
+        summary_info = {}
+        try:
+            summary_success = await document_manager.update_document_with_summary(document_id)
+            if summary_success:
+                # Get summary info for response
+                updated_doc = await document_manager.retrieve_full_document(document_id)
+                if updated_doc and updated_doc.get('summary'):
+                    from src.services.context_assembler import TokenManager
+                    token_manager = TokenManager()
+                    summary_tokens = token_manager.count_tokens(updated_doc['summary'])
+                    summary_info = {
+                        "summary_generated": True,
+                        "summary_tokens": summary_tokens,
+                        "summary_preview": updated_doc['summary'][:200] + "..." if len(updated_doc['summary']) > 200 else updated_doc['summary']
+                    }
+        except Exception as e:
+            logger.warning(f"AI summarization failed for document {document_id}: {str(e)}")
+            summary_info = {
+                "summary_generated": False,
+                "summary_error": "AI summarization failed but document was processed successfully"
+            }
+        
         return {
             "status": "success",
             "document_id": document_id,
-            "message": f"Multi-modal processing complete for '{title}'",
+            "message": f"Multi-modal processing complete for '{title}'" + (" with AI summary" if summary_success else ""),
             "processing_results": {
                 "text_extracted": True,
                 "word_count": processed_data["metadata"]["word_count"],
                 "images_detected": processed_data["metadata"]["total_images"],
                 "tables_detected": processed_data["metadata"]["total_tables"],
                 "visual_summary": processed_data["visual_summary"],
-                "processing_time_ms": processed_data["metadata"]["processing_time_ms"]
+                "processing_time_ms": processed_data["metadata"]["processing_time_ms"],
+                # AI Summarization results (SCRUM-41)
+                **summary_info
             }
         }
         

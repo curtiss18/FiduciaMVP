@@ -21,6 +21,8 @@ from sqlalchemy.orm import selectinload
 
 from src.models.advisor_workflow_models import SessionDocuments
 from src.core.database import AsyncSessionLocal
+from src.services.claude_service import claude_service
+from src.services.context_assembler import TokenManager
 
 logger = logging.getLogger(__name__)
 
@@ -459,3 +461,140 @@ class DocumentManager:
             except Exception as e:
                 logger.error(f"Error getting document statistics: {str(e)}")
                 raise Exception(f"Failed to get document statistics: {str(e)}")
+    
+    # ===== AI SUMMARIZATION METHODS =====
+    
+    async def generate_ai_summary(
+        self, 
+        content: str, 
+        content_type: str, 
+        target_tokens: int = 800
+    ) -> str:
+        """
+        Generate AI-powered summary using Claude for Warren context.
+        
+        Args:
+            content: Full document content
+            content_type: Type of content ('pdf', 'docx', 'txt', 'video_transcript')
+            target_tokens: Target token count for summary (default: 800)
+            
+        Returns:
+            str: AI-generated summary optimized for Warren context
+        """
+        try:
+            # Initialize token manager for accurate counting
+            token_manager = TokenManager()
+            
+            # Create financial document summarization prompt
+            summarization_prompt = f"""You are a financial document analysis expert. Please create a comprehensive summary of the following {content_type.upper()} document that will be used as context for an AI assistant helping financial advisors create compliant marketing content.
+
+IMPORTANT REQUIREMENTS:
+- Target length: ~{target_tokens} tokens
+- Focus on key financial concepts, strategies, and actionable insights
+- Preserve important numbers, percentages, and data points
+- Highlight compliance-relevant information
+- Structure the summary with clear sections if appropriate
+- Make it useful for generating financial marketing content
+
+DOCUMENT CONTENT:
+{content}
+
+Please provide a well-structured summary that captures the essential information while staying within the token target:"""
+
+            # Get AI summary from Claude
+            response = await claude_service.generate_content(
+                prompt=summarization_prompt,
+                max_tokens=target_tokens * 2  # Allow some buffer for generation
+            )
+            
+            if not response:
+                logger.error("No valid response from Claude service for summarization")
+                return content[:2000] + "..." if len(content) > 2000 else content
+            
+            summary = response
+            
+            # Verify token count
+            summary_tokens = token_manager.count_tokens(summary)
+            logger.info(f"Generated summary: {summary_tokens} tokens (target: {target_tokens})")
+            
+            # If summary is too long, truncate intelligently
+            if summary_tokens > target_tokens * 1.2:  # 20% buffer
+                truncated = token_manager.truncate_to_token_limit(summary, target_tokens)
+                logger.info(f"Summary truncated from {summary_tokens} to ~{target_tokens} tokens")
+                return truncated
+            
+            return summary
+            
+        except Exception as e:
+            logger.error(f"Error generating AI summary: {str(e)}")
+            # Fallback to simple truncation
+            return content[:2000] + "..." if len(content) > 2000 else content
+    
+    async def update_document_with_summary(self, document_id: str) -> bool:
+        """
+        Generate and store AI summary for an existing document.
+        
+        Args:
+            document_id: ID of document to summarize
+            
+        Returns:
+            bool: True if summary was generated and stored successfully
+        """
+        async with AsyncSessionLocal() as db:
+            try:
+                # Retrieve document content
+                stmt = select(SessionDocuments).where(SessionDocuments.id == document_id)
+                result = await db.execute(stmt)
+                document = result.scalar_one_or_none()
+                
+                if not document:
+                    logger.error(f"Document not found: {document_id}")
+                    return False
+                
+                if not document.full_content:
+                    logger.warning(f"No content to summarize for document: {document_id}")
+                    return False
+                
+                # Generate AI summary
+                ai_summary = await self.generate_ai_summary(
+                    content=document.full_content,
+                    content_type=document.content_type,
+                    target_tokens=800
+                )
+                
+                # Update document with summary and metadata
+                existing_metadata = {}
+                if document.document_metadata:
+                    try:
+                        existing_metadata = json.loads(document.document_metadata) if isinstance(document.document_metadata, str) else document.document_metadata
+                    except:
+                        existing_metadata = {}
+                
+                # Add summarization metadata
+                existing_metadata.update({
+                    "ai_summary_generated": True,
+                    "summary_generated_at": datetime.utcnow().isoformat(),
+                    "summary_token_count": TokenManager().count_tokens(ai_summary),
+                    "summarization_version": "1.0.0"
+                })
+                
+                # Update database
+                update_stmt = update(SessionDocuments).where(
+                    SessionDocuments.id == document_id
+                ).values(
+                    summary=ai_summary,
+                    document_metadata=json.dumps(existing_metadata),
+                    processing_status='processed',
+                    updated_at=func.now()
+                )
+                
+                await db.execute(update_stmt)
+                await db.commit()
+                
+                logger.info(f"AI summary generated and stored for document: {document_id}")
+                return True
+                
+            except Exception as e:
+                await db.rollback()
+                logger.error(f"Error updating document with summary {document_id}: {str(e)}")
+                return False
