@@ -6,13 +6,17 @@ API endpoints for advisor content workflow:
 3. Compliance submission workflow
 """
 
-from fastapi import APIRouter, Query, HTTPException
+import logging
+from fastapi import APIRouter, Query, HTTPException, File, UploadFile, Form
 from typing import Optional, List
 from pydantic import BaseModel
 
 from src.services.advisor_workflow_service import advisor_workflow_service
 from src.services.document_manager import DocumentManager
+from src.services.document_processor import DocumentProcessor
 from src.models.advisor_workflow_models import ContentStatus
+
+logger = logging.getLogger(__name__)
 
 # Create router for advisor workflow endpoints
 advisor_router = APIRouter(prefix="/advisor", tags=["advisor"])
@@ -226,8 +230,9 @@ class UpdateDocumentRequest(BaseModel):
     processing_error: Optional[str] = None
     document_metadata: Optional[dict] = None
 
-# Initialize DocumentManager instance
+# Initialize service instances
 document_manager = DocumentManager()
+document_processor = DocumentProcessor()
 
 @advisor_router.post("/documents/upload")
 async def upload_document(request: UploadDocumentRequest):
@@ -260,6 +265,85 @@ async def upload_document(request: UploadDocumentRequest):
         
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@advisor_router.post("/documents/upload-file")
+async def upload_file_with_processing(
+    session_id: str = Form(...),
+    title: str = Form(...),
+    file: UploadFile = File(...)
+):
+    """
+    Enhanced file upload with full multi-modal processing.
+    
+    Supports PDF, DOCX, TXT files with comprehensive:
+    - Text extraction
+    - Image and chart detection  
+    - Table extraction with structured data
+    - Visual element descriptions
+    - Warren-optimized context generation
+    - Security validation
+    
+    SCRUM-40: Enhanced Multi-Modal Document Processing
+    """
+    try:
+        # Read file content
+        file_content = await file.read()
+        
+        # Determine content type from filename
+        file_ext = file.filename.lower().split('.')[-1] if '.' in file.filename else ''
+        if file_ext not in ['pdf', 'docx', 'txt']:
+            raise HTTPException(status_code=400, detail=f"Unsupported file type: {file_ext}")
+        
+        # Process file with DocumentProcessor
+        processed_data = await document_processor.process_uploaded_file(
+            file_content=file_content,
+            filename=file.filename,
+            content_type=file_ext
+        )
+        
+        # Prepare document data for storage
+        document_data = {
+            "title": title,
+            "content_type": file_ext,
+            "full_content": processed_data["text"],
+            "original_filename": file.filename,
+            "file_size_bytes": len(file_content),
+            "metadata": {
+                # Core metadata
+                **processed_data["metadata"],
+                # Multi-modal content
+                "images": processed_data["images"],
+                "tables": processed_data["tables"],
+                "visual_summary": processed_data["visual_summary"],
+                "warren_context": processed_data["warren_context"],
+                # Processing info
+                "multi_modal_processed": True,
+                "processor_version": "1.0.0"
+            }
+        }
+        
+        # Store processed document
+        document_id = await document_manager.store_document(
+            document_data=document_data,
+            session_id=session_id
+        )
+        
+        return {
+            "status": "success",
+            "document_id": document_id,
+            "message": f"Multi-modal processing complete for '{title}'",
+            "processing_results": {
+                "text_extracted": True,
+                "word_count": processed_data["metadata"]["word_count"],
+                "images_detected": processed_data["metadata"]["total_images"],
+                "tables_detected": processed_data["metadata"]["total_tables"],
+                "visual_summary": processed_data["visual_summary"],
+                "processing_time_ms": processed_data["metadata"]["processing_time_ms"]
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"File processing failed: {str(e)}")
 
 @advisor_router.get("/documents/{document_id}")
 async def get_document(document_id: str):

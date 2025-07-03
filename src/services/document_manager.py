@@ -133,30 +133,59 @@ class DocumentManager:
     
     async def get_context_summary(self, document_id: str) -> str:
         """
-        Get document summary for Warren context use.
+        Get enhanced document summary for Warren context use including visual elements.
         
         Args:
             document_id: ID of document
             
         Returns:
-            str: Document summary text (or first 1000 chars if no summary)
+            str: Enhanced document summary with visual context (SCRUM-40)
         """
         async with AsyncSessionLocal() as db:
             try:
-                stmt = select(SessionDocuments.summary, SessionDocuments.full_content).where(
-                    SessionDocuments.id == document_id
-                )
+                stmt = select(
+                    SessionDocuments.summary, 
+                    SessionDocuments.full_content,
+                    SessionDocuments.document_metadata
+                ).where(SessionDocuments.id == document_id)
                 result = await db.execute(stmt)
                 row = result.first()
                 
                 if not row:
                     raise ValueError(f"Document not found: {document_id}")
                 
-                # Return summary if available, otherwise first 1000 characters
+                # Start with text summary
+                base_summary = ""
                 if row.summary:
-                    return row.summary
+                    base_summary = row.summary
                 else:
-                    return row.full_content[:1000] + "..." if len(row.full_content) > 1000 else row.full_content
+                    base_summary = row.full_content[:1000] + "..." if len(row.full_content) > 1000 else row.full_content
+                
+                # Add visual context if available (SCRUM-40 enhancement)
+                if row.document_metadata:
+                    try:
+                        metadata = json.loads(row.document_metadata) if isinstance(row.document_metadata, str) else row.document_metadata
+                        
+                        # Check for multi-modal processing results
+                        if metadata.get("multi_modal_processed"):
+                            visual_context = metadata.get("warren_context", "")
+                            if visual_context:
+                                return f"{base_summary}\n\nVisual Context: {visual_context}"
+                            
+                            # Fallback: construct visual context from metadata
+                            visual_parts = []
+                            if metadata.get("total_images", 0) > 0:
+                                visual_parts.append(f"{metadata['total_images']} visual element(s)")
+                            if metadata.get("total_tables", 0) > 0:
+                                visual_parts.append(f"{metadata['total_tables']} data table(s)")
+                            
+                            if visual_parts:
+                                visual_summary = metadata.get("visual_summary", "Visual elements detected")
+                                return f"{base_summary}\n\nDocument contains: {', '.join(visual_parts)}. {visual_summary}"
+                    except (json.JSONDecodeError, TypeError) as e:
+                        logger.warning(f"Could not parse metadata for document {document_id}: {e}")
+                
+                return base_summary
                 
             except Exception as e:
                 logger.error(f"Error getting summary for document {document_id}: {str(e)}")
