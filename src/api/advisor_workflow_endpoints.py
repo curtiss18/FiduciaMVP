@@ -11,6 +11,7 @@ from typing import Optional, List
 from pydantic import BaseModel
 
 from src.services.advisor_workflow_service import advisor_workflow_service
+from src.services.document_manager import DocumentManager
 from src.models.advisor_workflow_models import ContentStatus
 
 # Create router for advisor workflow endpoints
@@ -205,6 +206,199 @@ async def get_content_statistics(
         raise HTTPException(status_code=400, detail=result["error"])
     
     return result
+
+# ===== DOCUMENT MANAGEMENT ENDPOINTS =====
+
+class UploadDocumentRequest(BaseModel):
+    session_id: str
+    title: str
+    content_type: str  # 'pdf', 'docx', 'txt', 'video_transcript'
+    full_content: str
+    original_filename: Optional[str] = None
+    file_size_bytes: Optional[int] = None
+    metadata: Optional[dict] = None
+
+class UpdateDocumentRequest(BaseModel):
+    title: Optional[str] = None
+    full_content: Optional[str] = None
+    summary: Optional[str] = None
+    processing_status: Optional[str] = None
+    processing_error: Optional[str] = None
+    document_metadata: Optional[dict] = None
+
+# Initialize DocumentManager instance
+document_manager = DocumentManager()
+
+@advisor_router.post("/documents/upload")
+async def upload_document(request: UploadDocumentRequest):
+    """
+    Upload a document to a Warren session for context use.
+    
+    Supports PDF, DOCX, TXT, and video transcript content types.
+    Documents are stored with metadata and can be used by Warren for content generation.
+    """
+    try:
+        document_data = {
+            "title": request.title,
+            "content_type": request.content_type,
+            "full_content": request.full_content,
+            "original_filename": request.original_filename,
+            "file_size_bytes": request.file_size_bytes,
+            "metadata": request.metadata or {}
+        }
+        
+        document_id = await document_manager.store_document(
+            document_data=document_data,
+            session_id=request.session_id
+        )
+        
+        return {
+            "status": "success",
+            "document_id": document_id,
+            "message": f"Document '{request.title}' uploaded successfully"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@advisor_router.get("/documents/{document_id}")
+async def get_document(document_id: str):
+    """Get complete document information by ID."""
+    try:
+        document = await document_manager.retrieve_full_document(document_id)
+        return {
+            "status": "success",
+            "document": document
+        }
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@advisor_router.get("/documents/{document_id}/summary")
+async def get_document_summary(document_id: str):
+    """Get document summary for Warren context use."""
+    try:
+        summary = await document_manager.get_context_summary(document_id)
+        return {
+            "status": "success",
+            "document_id": document_id,
+            "summary": summary
+        }
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@advisor_router.get("/documents/{document_id}/relevant-sections")
+async def extract_relevant_sections(
+    document_id: str,
+    query: str = Query(..., description="Search query to find relevant sections"),
+    max_length: int = Query(2000, ge=100, le=5000, description="Maximum length of returned text")
+):
+    """Extract relevant sections from document based on query."""
+    try:
+        sections = await document_manager.extract_relevant_sections(
+            document_id=document_id,
+            query=query,
+            max_length=max_length
+        )
+        return {
+            "status": "success",
+            "document_id": document_id,
+            "query": query,
+            "relevant_sections": sections
+        }
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@advisor_router.get("/sessions/{session_id}/documents")
+async def get_session_documents(
+    session_id: str,
+    include_content: bool = Query(False, description="Whether to include full document content")
+):
+    """Get all documents for a specific Warren session."""
+    try:
+        documents = await document_manager.get_session_documents(
+            session_id=session_id,
+            include_content=include_content
+        )
+        return {
+            "status": "success",
+            "session_id": session_id,
+            "document_count": len(documents),
+            "documents": documents
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@advisor_router.put("/documents/{document_id}")
+async def update_document(document_id: str, request: UpdateDocumentRequest):
+    """Update document metadata or content."""
+    try:
+        # Build updates dictionary from non-None fields
+        updates = {}
+        if request.title is not None:
+            updates["title"] = request.title
+        if request.full_content is not None:
+            updates["full_content"] = request.full_content
+        if request.summary is not None:
+            updates["summary"] = request.summary
+        if request.processing_status is not None:
+            updates["processing_status"] = request.processing_status
+        if request.processing_error is not None:
+            updates["processing_error"] = request.processing_error
+        if request.document_metadata is not None:
+            updates["document_metadata"] = request.document_metadata
+        
+        if not updates:
+            raise HTTPException(status_code=400, detail="No valid fields provided for update")
+        
+        success = await document_manager.update_document(document_id, updates)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        return {
+            "status": "success",
+            "document_id": document_id,
+            "message": "Document updated successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@advisor_router.delete("/documents/{document_id}")
+async def delete_document(document_id: str):
+    """Delete a document from storage."""
+    try:
+        success = await document_manager.delete_document(document_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        return {
+            "status": "success",
+            "document_id": document_id,
+            "message": "Document deleted successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@advisor_router.get("/documents/statistics")
+async def get_document_statistics(
+    session_id: Optional[str] = Query(None, description="Optional session ID to filter by")
+):
+    """Get document statistics for advisor or specific session."""
+    try:
+        stats = await document_manager.get_document_statistics(session_id)
+        return {
+            "status": "success",
+            "statistics": stats
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # ===== UTILITY ENDPOINTS =====
 
