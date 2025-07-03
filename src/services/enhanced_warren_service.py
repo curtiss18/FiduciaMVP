@@ -18,6 +18,8 @@ from src.services.content_vectorization_service import content_vectorization_ser
 from src.services.claude_service import claude_service
 from src.services.prompt_service import prompt_service
 from src.services.conversation_manager import ConversationManager
+from src.services.context_assembler import ContextAssembler, TokenManager
+from src.services.advanced_context_assembler import AdvancedContextAssembler
 from src.core.database import AsyncSessionLocal
 from src.models.refactored_database import ContentType, AudienceType
 
@@ -95,8 +97,9 @@ class EnhancedWarrenService:
                 context_data["fallback_used"] = False
                 context_data["search_strategy"] = "vector"  # Explicitly set vector strategy
             
-            # NEW: Add conversation context to context_data
+            # NEW: Add conversation context and session info to context_data
             context_data["conversation_context"] = conversation_context
+            context_data["session_id"] = session_id  # Pass session_id to ContextAssembler
             
             # Generate content with Warren using the assembled context
             warren_content = await self._generate_with_enhanced_context(
@@ -327,8 +330,172 @@ class EnhancedWarrenService:
         is_refinement: bool = False,
         youtube_context: Optional[Dict[str, Any]] = None
     ) -> str:
-        """Generate content using Warren with enhanced context and smart prompt selection."""
+        """
+        Generate content using Warren with intelligent context assembly and token management.
+        NEW: Uses ContextAssembler for sophisticated token allocation and context optimization.
+        """
+        try:
+            # Initialize Phase 2 advanced context assembly system
+            async with AsyncSessionLocal() as db_session:
+                # Use Phase 2 Advanced Context Assembler for sophisticated prioritization
+                context_assembler = AdvancedContextAssembler(db_session)
+                
+                # Get session_id from context_data if available
+                session_id = context_data.get("session_id")
+                
+                # Use Phase 2 AdvancedContextAssembler for intelligent context building
+                assembly_result = await context_assembler.build_warren_context(
+                    session_id=session_id or "no-session",
+                    user_input=user_request,
+                    context_data=context_data,
+                    current_content=current_content,
+                    youtube_context=youtube_context
+                )
+                
+                # Get the appropriate system prompt based on request type
+                prompt_context = {
+                    'platform': self._extract_platform_from_content_type(content_type),
+                    'content_type': content_type,
+                    'audience_type': audience_type
+                }
+                
+                if is_refinement and current_content:
+                    # Use refinement prompt
+                    refinement_context = {
+                        'current_content': current_content,
+                        'refinement_request': user_request,
+                        **prompt_context
+                    }
+                    base_system_prompt = prompt_service.get_warren_refinement_prompt(refinement_context)
+                else:
+                    # Use main system prompt
+                    base_system_prompt = prompt_service.get_warren_system_prompt(prompt_context)
+                
+                # Build final prompt with Phase 2 optimized context
+                optimized_context = assembly_result["context"]
+                final_prompt = f"""{base_system_prompt}
+
+{optimized_context}
+
+Based on the above information, please create compliant marketing content that:
+1. Follows all SEC Marketing Rule and FINRA 2210 requirements
+2. Includes appropriate disclaimers and risk disclosures
+3. Uses educational tone rather than promotional claims
+4. Avoids performance predictions or guarantees
+5. Is appropriate for the specified platform/content type
+6. References the style and structure of the approved examples
+
+Remember to wrap your final marketing content in ##MARKETINGCONTENT## delimiters.
+
+Generate the content now:"""
+                
+                # Log Phase 2 enhanced context assembly details
+                logger.info(f"Phase 2 Advanced Context Assembly Complete:")
+                logger.info(f"   Request Type: {assembly_result['request_type']}")
+                logger.info(f"   Total Tokens: {assembly_result['total_tokens']}")
+                logger.info(f"   Quality Score: {assembly_result.get('quality_metrics', {}).get('overall_quality', 'N/A')}")
+                logger.info(f"   Average Relevance: {assembly_result.get('quality_metrics', {}).get('avg_relevance', 'N/A')}")
+                logger.info(f"   High Priority Sources: {assembly_result.get('quality_metrics', {}).get('high_priority_count', 'N/A')}")
+                logger.info(f"   Context Diversity: {assembly_result.get('quality_metrics', {}).get('context_diversity', 'N/A')}")
+                logger.info(f"   Phase: {assembly_result.get('phase', 'Phase_2_Advanced')}")
+                
+                # Add Phase 2 assembly metadata to context_data for response
+                context_data["token_management"] = {
+                    "total_tokens": assembly_result["total_tokens"],
+                    "request_type": assembly_result["request_type"],
+                    "optimization_applied": assembly_result["optimization_applied"],
+                    "context_breakdown": assembly_result["context_breakdown"],
+                    "quality_metrics": assembly_result.get("quality_metrics", {}),
+                    "relevance_scores": assembly_result.get("relevance_scores", {}),
+                    "priority_scores": assembly_result.get("priority_scores", {}),
+                    "phase": "Phase_2_Advanced"
+                }
+                
+        except Exception as e:
+            logger.error(f"Error in Phase 2 advanced context assembly: {e}")
+            # Fallback to Phase 1 context assembler
+            logger.info("Falling back to Phase 1 context assembler")
+            try:
+                async with AsyncSessionLocal() as db_session:
+                    context_assembler = ContextAssembler(db_session)
+                    
+                    assembly_result = await context_assembler.build_warren_context(
+                        session_id=context_data.get("session_id", "no-session"),
+                        user_input=user_request,
+                        context_data=context_data,
+                        current_content=current_content,
+                        youtube_context=youtube_context
+                    )
+                    
+                    optimized_context = assembly_result["context"]
+                    
+                    # Add Phase 1 fallback metadata
+                    context_data["token_management"] = {
+                        **assembly_result,
+                        "phase": "Phase_1_Fallback"
+                    }
+                    
+                    # Build Phase 1 prompt
+                    prompt_context = {
+                        'platform': self._extract_platform_from_content_type(content_type),
+                        'content_type': content_type,
+                        'audience_type': audience_type
+                    }
+                    
+                    if is_refinement and current_content:
+                        refinement_context = {
+                            'current_content': current_content,
+                            'refinement_request': user_request,
+                            **prompt_context
+                        }
+                        base_system_prompt = prompt_service.get_warren_refinement_prompt(refinement_context)
+                    else:
+                        base_system_prompt = prompt_service.get_warren_system_prompt(prompt_context)
+                    
+                    final_prompt = f"""{base_system_prompt}
+
+{optimized_context}
+
+Based on the above information, please create compliant marketing content that:
+1. Follows all SEC Marketing Rule and FINRA 2210 requirements
+2. Includes appropriate disclaimers and risk disclosures
+3. Uses educational tone rather than promotional claims
+4. Avoids performance predictions or guarantees
+5. Is appropriate for the specified platform/content type
+6. References the style and structure of the approved examples
+
+Remember to wrap your final marketing content in ##MARKETINGCONTENT## delimiters.
+
+Generate the content now:"""
+                    
+                    logger.info("Phase 1 fallback context assembly completed successfully")
+                    
+            except Exception as fallback_error:
+                logger.error(f"Error in Phase 1 fallback context assembly: {fallback_error}")
+                # Final fallback to legacy context building
+                logger.info("Falling back to legacy context building")
+                return await self._generate_with_legacy_context(
+                    context_data, user_request, content_type, audience_type, 
+                    current_content, is_refinement, youtube_context
+                )
         
+        # Generate content with Warren using the intelligently assembled context
+        return await claude_service.generate_content(final_prompt)
+    
+    async def _generate_with_legacy_context(
+        self,
+        context_data: Dict[str, Any],
+        user_request: str,
+        content_type: str,
+        audience_type: Optional[str],
+        current_content: Optional[str] = None,
+        is_refinement: bool = False,
+        youtube_context: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        Legacy context building method as fallback.
+        Preserves original functionality when intelligent assembly fails.
+        """
         # Determine which prompt to use based on whether this is a refinement
         if is_refinement and current_content:
             # Use refinement prompt with current content context
@@ -342,7 +509,7 @@ class EnhancedWarrenService:
             
             base_system_prompt = prompt_service.get_warren_refinement_prompt(refinement_context)
             
-            # NEW: Include conversation context for refinements too!
+            # Include conversation context for refinements
             conversation_context = context_data.get("conversation_context", "")
             conversation_section = ""
             if conversation_context:
@@ -380,7 +547,7 @@ Wrap your refined content in ##MARKETINGCONTENT## delimiters and explain your ch
             # Build enhanced context from knowledge base for new content
             context_parts = ["\nHere is relevant compliance information from our knowledge base:"]
             
-            # NEW: Add conversation context if available
+            # Add conversation context if available
             conversation_context = context_data.get("conversation_context", "")
             if conversation_context:
                 context_parts.insert(0, "\n## CONVERSATION HISTORY:")
@@ -409,7 +576,7 @@ Wrap your refined content in ##MARKETINGCONTENT## delimiters and explain your ch
                 for disclaimer in disclaimers[:2]:
                     context_parts.append(f"\n**{disclaimer['title']}**: {disclaimer['content_text'][:200]}...")
             
-            # NEW: Add YouTube video context if provided
+            # Add YouTube video context if provided
             if youtube_context:
                 logger.info(f"Processing YouTube context for Warren")
                 context_parts.append(f"\n## VIDEO CONTEXT:")
@@ -429,7 +596,7 @@ Wrap your refined content in ##MARKETINGCONTENT## delimiters and explain your ch
                     context_parts.append(f"\n**VIDEO TRANSCRIPT PROVIDED BELOW:**")
                     
                     # Limit transcript to reasonable length for prompt
-                    max_transcript_length = 4000  # Increased from 3000 for more context
+                    max_transcript_length = 4000
                     if len(transcript) > max_transcript_length:
                         transcript_preview = transcript[:max_transcript_length] + "..."
                         context_parts.append(f"\n{transcript_preview}")
