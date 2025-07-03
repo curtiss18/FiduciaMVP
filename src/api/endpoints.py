@@ -347,7 +347,8 @@ async def warren_generate_content_v3(request: dict):
             session_id=session_id,
             current_content=current_content,
             is_refinement=is_refinement,
-            youtube_context=youtube_context  # NEW: Pass YouTube context
+            youtube_context=youtube_context,  # NEW: Pass YouTube context
+            use_conversation_context=True  # NEW: Enable conversation memory
         )
         
         # Add YouTube info to response if it was used

@@ -28,14 +28,14 @@ export const warrenChatApi = {
   // Send message to Warren in conversational format
   sendMessage: async (
     message: string, 
-    conversationId: string,
+    sessionId: string,
     context?: any
   ): Promise<WarrenResponse> => {
     const response = await api.post('/warren/generate-v3', {
       request: message,
       content_type: context?.contentType || 'linkedin_post',
       audience_type: context?.audience || 'general_education',
-      conversation_id: conversationId,
+      session_id: sessionId,  // FIXED: Use session_id instead of conversation_id
       previous_context: context,
       current_content: context?.current_content,
       is_refinement: context?.is_refinement || false,

@@ -70,3 +70,9 @@ class GeneratedContent(Base):
     sources_used = Column(Text, nullable=True)  # JSON array of source document IDs
     approved = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# Import advisor workflow models to ensure tables are created
+from src.models.advisor_workflow_models import *
+from src.models.refactored_database import *
+from src.models.audiences import *

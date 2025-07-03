@@ -1,21 +1,35 @@
 # 🏛️ FiduciaMVP
 
 > **AI-Powered Financial Compliance Content Generation Platform**  
-> **World's First Complete Audience Management System with Professional Frontend**
+> **World's First Complete Conversation Memory Management System**
 
-An enterprise-grade SaaS platform that generates SEC/FINRA-compliant marketing content for financial advisors using advanced semantic search, context-aware AI technology, and revolutionary audience targeting capabilities with complete professional frontend and 41+ production-ready API endpoints.
+An enterprise-grade SaaS platform that generates SEC/FINRA-compliant marketing content for financial advisors using advanced semantic search, context-aware AI technology with conversation memory, and revolutionary audience targeting capabilities with complete professional frontend and 41+ production-ready API endpoints.
 
 ## 🎯 **What is FiduciaMVP?**
 
 FiduciaMVP solves a critical problem in financial services: creating compliant marketing content is expensive and time-consuming. Financial advisors typically pay $8K-$15K/month for compliance experts, while our platform provides automated compliance at $99-$599/month - saving customers $120K-$250K annually.
 
-**Revolutionary Feature**: The world's first AI system with complete audience management and targeting capabilities, showing users exactly how many compliance sources informed their content generation while providing professional contact and audience organization for targeted content creation.
+**Revolutionary Feature**: The world's first AI system with complete conversation memory management that maintains context across long conversations while respecting Claude's 200K token limits, featuring intelligent compression, context preservation, and seamless integration with content generation workflows.
 
-**Built for**: Investment Advisor Representatives (IARs), Registered Investment Advisors (RIAs), and financial services firms requiring SEC/FINRA-compliant marketing content with audience targeting capabilities.
+**Built for**: Investment Advisor Representatives (IARs), Registered Investment Advisors (RIAs), and financial services firms requiring SEC/FINRA-compliant marketing content with advanced conversation continuity.
 
 ## 🚀 **Revolutionary Features**
 
-### **Complete Audience Management System** 🆕
+### **Complete Conversation Memory Management System** 🆕
+- **Intelligent Token Management**: Automatically manages Claude's 200K token limit with 20K buffer for responses
+- **Smart Context Compression**: Compresses conversations exceeding 150K tokens while preserving key information
+- **Recent Message Preservation**: Always keeps last 5 conversation pairs in full detail for immediate context
+- **Conversation Summarization**: Creates intelligent summaries of older conversation segments
+- **Context Type Management**: Supports full_history, compressed, and summary context modes
+- **Database Integration**: Complete conversation persistence with compression tracking and audit trails
+- **Warren Integration**: Seamless integration with both normal generation and refinement workflows
+- **Metadata Preservation**: Source transparency data maintained throughout conversation history
+- **Automatic Session Management**: Creates and manages conversation sessions transparently
+- **Context Quality Assessment**: Evaluates compression effectiveness and context sufficiency
+- **Production Logging**: Comprehensive logging for debugging and performance optimization
+- **Graceful Fallbacks**: Maintains conversation continuity even when context management fails
+
+### **Complete Audience Management System**
 - **Professional Split-Screen Interface**: Card-based audience list with detailed audience view
 - **Audience CRUD Frontend**: Create, read, update, delete audiences with professional forms
 - **Smart Contact Management**: Multi-select contact addition/removal with filtered modals
@@ -211,21 +225,24 @@ cd frontend-advisor && npm install && npm run dev
 
 ## 🏆 **Competitive Advantages**
 
+- **World's First Complete Conversation Memory Management**: Intelligent token management with automatic compression and context preservation
+- **Advanced Context Compression Technology**: Smart compression preserves conversation meaning while fitting Claude's 200K token constraints
+- **Conversation-Aware AI**: Warren maintains context across both normal generation and refinement workflows
 - **World's First Complete Audience Management Frontend**: Professional split-screen interface with comprehensive contact and audience CRUD operations
 - **Advanced Multi-Select Contact Management**: Bulk contact assignment/removal with filtered modals showing only available contacts
 - **Professional CRM Integration**: Complete contact and audience management system with real-time search and status filtering
 - **Mobile-First Responsive Design**: Seamless single-panel navigation on mobile with smooth desktop experience
 - **Revolutionary Source Transparency**: Real-time display of compliance sources informing content generation
 - **Professional Navigation System**: Collapsible sidebar with mobile responsiveness and state persistence
-- **Trust Building Technology**: Financial advisors see exactly how many sources back their content
+- **Trust Building Technology**: Financial advisors see exactly how many sources back their content with conversation memory
 - **Pure Vector Search**: Achieved **🔵 VECTOR** search across complete compliance database
-- **Complete Database Integration**: Production-ready APIs with 41+ endpoints including 13 audience management endpoints
+- **Complete Database Integration**: Production-ready APIs with 41+ endpoints including conversation memory management
 - **Professional Source Badges**: Enterprise-grade UI showing source breakdown and search quality
-- **Context-Aware AI Prompting**: Warren adapts behavior throughout content lifecycle with source transparency
+- **Context-Aware AI Prompting**: Warren adapts behavior throughout content lifecycle with conversation memory and source transparency
 - **Professional Split-Screen UX**: Unique interface design for both chat and audience management
 - **Centralized Prompt Management**: Single source of truth for all AI interactions
 - **Clean Content Architecture**: Delimiter-based extraction with enterprise UI
-- **Complete Content Lifecycle**: Creation → Refinement → Distribution workflow with source research
+- **Complete Content Lifecycle**: Creation → Refinement → Distribution workflow with conversation memory and source research
 - **Production-Ready Interface**: Enterprise-grade design ready for customer pilots and enterprise deployment
 
 ## 💼 **Business Impact**
@@ -495,9 +512,9 @@ python check_database.py
 ---
 
 **Built for the financial services industry** 🏛️  
-*The world's first complete audience management system with professional split-screen interface, multi-select contact management, and enterprise-grade CRM capabilities*
+*The world's first complete conversation memory management system with intelligent token compression, context preservation, and seamless conversation continuity*
 
-**Ready for**: Customer pilots, enterprise deployment, investor demonstrations, and market leadership with complete audience targeting capabilities
+**Ready for**: Customer pilots, enterprise deployment, investor demonstrations, and market leadership with complete conversation memory capabilities
 
 > 📋 **For detailed development instructions, testing workflows, and troubleshooting**, see the **[Development Guide](docs/development-guide.md)**  
 > 🔍 **For complete system status and revolutionary features**, see the **[Current State](docs/CURRENT_STATE.md)**  
@@ -506,6 +523,9 @@ python check_database.py
 
 ## 🎯 **Key Achievements**
 
+- ✅ **Complete Conversation Memory Management**: Intelligent token management with automatic compression and context preservation
+- ✅ **Smart Context Compression**: Preserves conversation meaning while fitting Claude's 200K token constraints
+- ✅ **Conversation-Aware Warren**: AI maintains context across both normal generation and refinement workflows
 - ✅ **Complete Database Integration**: Production-ready content API with all 29 marketing records accessible
 - ✅ **Perfect Enum Synchronization**: SQLAlchemy and PostgreSQL enum types perfectly aligned
 - ✅ **Multi-Filter Content API**: Advanced filtering by type, audience, status with sub-second performance
@@ -513,13 +533,13 @@ python check_database.py
 - ✅ **Professional Advisor Portal**: Complete navigation system with collapsible sidebar and mobile responsiveness
 - ✅ **Unified Header System**: Single PageHeader component with profile management across all pages
 - ✅ **Perfect Empty States**: Consistently aligned empty states guiding users to content creation
-- ✅ **Complete Advisor Workflow**: End-to-end content lifecycle management with 8 API endpoints
-- ✅ **Source Transparency**: Revolutionary compliance research display with persistence
-- ✅ **Warren Chat Persistence**: Complete AI conversation history with metadata
+- ✅ **Complete Advisor Workflow**: End-to-end content lifecycle management with conversation memory
+- ✅ **Source Transparency**: Revolutionary compliance research display with conversation persistence
+- ✅ **Warren Chat Persistence**: Complete AI conversation history with metadata and memory management
 - ✅ **Content Library Foundation**: Professional interface ready for 29 marketing content pieces
 - ✅ **Compliance Pipeline**: Built-in review and approval workflow
 - ✅ **Pure Vector Search**: **🔵 VECTOR** achievement across compliance database
-- ✅ **Enterprise Architecture**: Scalable system ready for thousands of advisors
-- ✅ **Production Ready**: Comprehensive testing with functional backend integration
+- ✅ **Enterprise Architecture**: Scalable system ready for thousands of advisors with conversation memory
+- ✅ **Production Ready**: Comprehensive testing with functional backend integration and conversation management
 - ✅ **Shared Design System**: Zero code duplication with unified theming
-- ✅ **Audit Trail**: Complete regulatory compliance tracking and documentation
+- ✅ **Audit Trail**: Complete regulatory compliance tracking and documentation with conversation history

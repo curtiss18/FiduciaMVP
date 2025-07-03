@@ -8,12 +8,12 @@ Database schema focused on advisor-to-compliance workflow:
 """
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Float, Enum, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
 
-Base = declarative_base()
+# Import shared Base from main database models
+from src.models.database import Base
 
 # Enums for advisor workflow
 class ContentStatus(enum.Enum):
@@ -161,3 +161,25 @@ class ContentDistribution(Base):
     engagement_score = Column(Float, nullable=True)
     
     advisor_id = Column(String(50), nullable=False, index=True)
+
+
+class ConversationContext(Base):
+    """Manage conversation context and memory for Warren sessions"""
+    __tablename__ = "conversation_context"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String(100), ForeignKey('advisor_sessions.session_id'), nullable=False, index=True)
+    
+    # Context management
+    context_type = Column(String(20), nullable=False, index=True)  # 'full_history', 'compressed', 'summary'
+    content = Column(Text, nullable=False)  # The actual context content
+    token_count = Column(Integer, nullable=False)  # Number of tokens this context uses
+    
+    # Context metadata
+    message_start_id = Column(Integer, nullable=True)  # First message ID this context covers
+    message_end_id = Column(Integer, nullable=True)    # Last message ID this context covers
+    compression_ratio = Column(Float, nullable=True)   # Original tokens / compressed tokens
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=True)  # Optional expiration for cleanup

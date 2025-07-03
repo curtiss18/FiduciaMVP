@@ -4,6 +4,7 @@ Enhanced Warren service implementing Hybrid MVP+ approach:
 - Primary: Vector search for semantic content matching
 - Fallback: Text search if vector search fails or returns poor results
 - Safety: Automatic degradation to ensure Warren always works
+- NEW: Conversation memory and context management
 """
 
 import logging
@@ -16,6 +17,8 @@ from src.services.warren_database_service import warren_db_service
 from src.services.content_vectorization_service import content_vectorization_service
 from src.services.claude_service import claude_service
 from src.services.prompt_service import prompt_service
+from src.services.conversation_manager import ConversationManager
+from src.core.database import AsyncSessionLocal
 from src.models.refactored_database import ContentType, AudienceType
 
 logger = logging.getLogger(__name__)
@@ -39,10 +42,12 @@ class EnhancedWarrenService:
         session_id: Optional[str] = None,
         current_content: Optional[str] = None,
         is_refinement: bool = False,
-        youtube_context: Optional[Dict[str, Any]] = None
+        youtube_context: Optional[Dict[str, Any]] = None,
+        use_conversation_context: bool = True  # NEW: Enable conversation memory
     ) -> Dict[str, Any]:
         """
         Generate content using enhanced vector search with automatic fallbacks.
+        NEW: Includes conversation memory and context management.
         """
         try:
             # Convert string content type to enum if possible
@@ -51,6 +56,22 @@ class EnhancedWarrenService:
             except ValueError:
                 content_type_enum = None
                 logger.warning(f"Unknown content type: {content_type}")
+            
+            # NEW: Get conversation context if enabled and session_id provided
+            conversation_context = ""
+            if use_conversation_context and session_id:
+                logger.info(f"🔍 Getting conversation context for session {session_id}")
+                conversation_context = await self._get_conversation_context(session_id)
+                if conversation_context:
+                    logger.info(f"✅ Retrieved conversation context: {len(conversation_context)} characters")
+                    logger.info(f"📝 Context preview: {conversation_context[:200]}...")
+                else:
+                    logger.info(f"❌ No conversation context found for session {session_id}")
+            else:
+                if not use_conversation_context:
+                    logger.info(f"🔄 Conversation context disabled (use_conversation_context=False)")
+                if not session_id:
+                    logger.info(f"🔄 No session_id provided, skipping conversation context")
             
             # Try vector search first (primary method)
             context_data = await self._get_vector_search_context(
@@ -74,11 +95,20 @@ class EnhancedWarrenService:
                 context_data["fallback_used"] = False
                 context_data["search_strategy"] = "vector"  # Explicitly set vector strategy
             
+            # NEW: Add conversation context to context_data
+            context_data["conversation_context"] = conversation_context
+            
             # Generate content with Warren using the assembled context
             warren_content = await self._generate_with_enhanced_context(
                 context_data, user_request, content_type, audience_type, 
                 current_content, is_refinement, youtube_context
             )
+            
+            # NEW: Save conversation turn if session_id provided
+            if session_id and use_conversation_context:
+                await self._save_conversation_turn(
+                    session_id, user_request, warren_content, context_data
+                )
             
             return {
                 "status": "success",
@@ -93,7 +123,9 @@ class EnhancedWarrenService:
                 "fallback_used": context_data.get("fallback_used", False),
                 "fallback_reason": context_data.get("fallback_reason"),
                 "context_quality_score": context_quality.get("score", 0.5),
-                "user_request": user_request
+                "user_request": user_request,
+                "conversation_context_used": bool(conversation_context),  # NEW: Track context usage
+                "session_id": session_id  # NEW: Include session_id in response
             }
             
         except Exception as e:
@@ -310,9 +342,21 @@ class EnhancedWarrenService:
             
             base_system_prompt = prompt_service.get_warren_refinement_prompt(refinement_context)
             
-            # For refinement, we primarily focus on the current content and user's request
-            final_prompt = f"""{base_system_prompt}
+            # NEW: Include conversation context for refinements too!
+            conversation_context = context_data.get("conversation_context", "")
+            conversation_section = ""
+            if conversation_context:
+                conversation_section = f"""
+## CONVERSATION HISTORY:
+{conversation_context}
 
+## REFINEMENT CONTEXT:
+"""
+                logger.info(f"Added conversation context to refinement prompt: {len(conversation_context)} characters")
+            
+            # For refinement, we focus on current content and user's request, but also include conversation context
+            final_prompt = f"""{base_system_prompt}
+{conversation_section}
 CURRENT CONTENT TO REFINE:
 ##MARKETINGCONTENT##
 {current_content}
@@ -320,7 +364,7 @@ CURRENT CONTENT TO REFINE:
 
 USER'S REFINEMENT REQUEST: {user_request}
 
-Please refine the content based on the user's request while maintaining SEC/FINRA compliance.
+Please refine the content based on the user's request while maintaining SEC/FINRA compliance. Consider the conversation history above for additional context about what we've been discussing.
 Wrap your refined content in ##MARKETINGCONTENT## delimiters and explain your changes."""
 
         else:
@@ -335,6 +379,14 @@ Wrap your refined content in ##MARKETINGCONTENT## delimiters and explain your ch
             
             # Build enhanced context from knowledge base for new content
             context_parts = ["\nHere is relevant compliance information from our knowledge base:"]
+            
+            # NEW: Add conversation context if available
+            conversation_context = context_data.get("conversation_context", "")
+            if conversation_context:
+                context_parts.insert(0, "\n## CONVERSATION HISTORY:")
+                context_parts.insert(1, f"\n{conversation_context}")
+                context_parts.insert(2, "\n## KNOWLEDGE BASE CONTEXT:")
+                logger.info(f"Added conversation context to Warren prompt: {len(conversation_context)} characters")
             
             # Add marketing examples with similarity scores if available
             marketing_examples = context_data.get("marketing_examples", [])
@@ -430,6 +482,52 @@ Generate the content now:"""
             'blog_post': 'website'
         }
         return platform_mapping.get(content_type.lower(), 'general')
+    
+    async def _get_conversation_context(self, session_id: str) -> str:
+        """
+        Get conversation context for a session using ConversationManager.
+        """
+        try:
+            async with AsyncSessionLocal() as db_session:
+                conversation_manager = ConversationManager(db_session)
+                return await conversation_manager.get_conversation_context(session_id)
+        except Exception as e:
+            logger.error(f"Error getting conversation context for session {session_id}: {e}")
+            return ""
+    
+    async def _save_conversation_turn(
+        self, 
+        session_id: str, 
+        user_input: str, 
+        warren_response: str, 
+        context_data: Dict[str, Any]
+    ):
+        """
+        Save a conversation turn using ConversationManager.
+        """
+        try:
+            # Prepare Warren metadata for storage
+            warren_metadata = {
+                'sources_used': context_data.get('marketing_examples', []) + context_data.get('disclaimers', []),
+                'generation_confidence': context_data.get('context_quality_score', 0.5),
+                'search_strategy': context_data.get('search_strategy', 'unknown'),
+                'total_sources': context_data.get('total_sources', 0),
+                'marketing_examples': context_data.get('marketing_examples_count', 0),
+                'compliance_rules': context_data.get('compliance_rules_count', 0)
+            }
+            
+            async with AsyncSessionLocal() as db_session:
+                conversation_manager = ConversationManager(db_session)
+                await conversation_manager.save_conversation_turn(
+                    session_id=session_id,
+                    user_input=user_input,
+                    warren_response=warren_response,
+                    warren_metadata=warren_metadata
+                )
+                logger.info(f"Saved conversation turn for session {session_id}")
+        except Exception as e:
+            logger.error(f"Error saving conversation turn for session {session_id}: {e}")
+            # Don't raise the exception - conversation saving shouldn't break content generation
 
 
 # Service instance
