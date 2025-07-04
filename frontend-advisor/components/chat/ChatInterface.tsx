@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback, useEffect } from 'react'
-import { Message, Conversation, GeneratedContent, WarrenResponse, ExtractedContent, SourceInformation } from '@/lib/types'
+import { Message, Conversation, GeneratedContent, WarrenResponse, ExtractedContent, SourceInformation, BatchUploadResponse } from '@/lib/types'
 import { warrenChatApi, advisorApi } from '@/lib/api'
 import { PageHeader } from '@/components/layout'
 import { MessageHistory } from './MessageHistory'
@@ -508,6 +508,39 @@ export const ChatInterface: React.FC = () => {
     sendMessageToWarren(message, url)
   }
 
+  // Handle session creation from document upload
+  const handleSessionCreated = (newSessionId: string) => {
+    console.log('Session created from document upload:', newSessionId)
+    setAdvisorSession(newSessionId)
+    setSessionTitle(`Document Upload Session - ${new Date().toLocaleDateString()}`)
+    setHasUnsavedChanges(true)
+    
+    addMessage({
+      role: 'warren',
+      content: `✅ Created new session for your document uploads! Session ID: ${newSessionId}\n\nYou can now continue our conversation and I'll use your uploaded documents as context.`,
+      type: 'text'
+    })
+  }
+  const handleMultiFileUpload = (results: BatchUploadResponse) => {
+    const { batch_results } = results
+    
+    if (batch_results.successful_count > 0) {
+      const successMessage = `✅ Successfully uploaded ${batch_results.successful_count} document${batch_results.successful_count !== 1 ? 's' : ''} to your session!${batch_results.failed_count > 0 ? ` (${batch_results.failed_count} failed)` : ''}\n\nI can now use these documents as context when creating your content. Just ask me what you'd like to create!`
+      
+      addMessage({
+        role: 'warren',
+        content: successMessage,
+        type: 'text'
+      })
+    } else {
+      addMessage({
+        role: 'warren', 
+        content: `❌ Failed to upload documents. Please check the file types (PDF, DOCX, TXT) and sizes (max 10MB each) and try again.`,
+        type: 'error'
+      })
+    }
+  }
+
   const handleCopyContent = () => {
     if (generatedContent?.content) {
       navigator.clipboard.writeText(generatedContent.content).then(() => {
@@ -932,6 +965,9 @@ export const ChatInterface: React.FC = () => {
                         onSendMessage={sendMessageToWarren}
                         onFileUpload={handleFileUpload}
                         onYouTubeUrl={handleYouTubeUrl}
+                        onMultiFileUpload={handleMultiFileUpload}
+                        onSessionCreated={handleSessionCreated}
+                        sessionId={advisorSession}
                         disabled={isLoading || isLoadingHistory}
                         placeholder={isLoadingHistory ? "Loading chat history..." : "Tell Warren what content you'd like to create..."}
                         standalone={true}
@@ -959,6 +995,9 @@ export const ChatInterface: React.FC = () => {
                   onSendMessage={sendMessageToWarren}
                   onFileUpload={handleFileUpload}
                   onYouTubeUrl={handleYouTubeUrl}
+                  onMultiFileUpload={handleMultiFileUpload}
+                  onSessionCreated={handleSessionCreated}
+                  sessionId={advisorSession}
                   disabled={isLoading || isLoadingHistory}
                   placeholder={isLoadingHistory ? "Loading chat history..." : "Continue your conversation with Warren..."}
                   standalone={!generatedContent}

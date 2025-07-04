@@ -5,11 +5,15 @@ import { Textarea } from '@/components/ui/textarea'
 import { Send, Paperclip } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AttachmentDropdown } from './AttachmentDropdown'
+import { BatchUploadResponse } from '@/lib/types'
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void
   onFileUpload?: (files: FileList) => void
   onYouTubeUrl?: (url: string) => void
+  onMultiFileUpload?: (results: BatchUploadResponse) => void
+  onSessionCreated?: (sessionId: string) => void
+  sessionId?: string | null
   disabled?: boolean
   placeholder?: string
   standalone?: boolean // New prop for centered layout
@@ -19,6 +23,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
   onFileUpload,
   onYouTubeUrl,
+  onMultiFileUpload,
+  onSessionCreated,
+  sessionId,
   disabled = false,
   placeholder = "Ask Warren to create compliant content...",
   standalone = false
@@ -97,6 +104,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           <AttachmentDropdown
             onFileUpload={onFileUpload}
             onYouTubeUrl={onYouTubeUrl}
+            onMultiFileUpload={onMultiFileUpload}
+            onSessionCreated={onSessionCreated}
+            sessionId={sessionId}
             disabled={disabled}
           />
 

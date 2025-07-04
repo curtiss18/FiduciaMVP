@@ -1,22 +1,31 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus, Paperclip, Youtube } from 'lucide-react'
+import { Plus, Paperclip, Youtube, Upload } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { MultiFileUploadModal } from './MultiFileUploadModal'
+import { BatchUploadResponse } from '@/lib/types'
 
 interface AttachmentDropdownProps {
   onFileUpload?: (files: FileList) => void
   onYouTubeUrl?: (url: string) => void
+  onMultiFileUpload?: (results: BatchUploadResponse) => void
+  onSessionCreated?: (sessionId: string) => void
+  sessionId?: string | null
   disabled?: boolean
 }
 
 export const AttachmentDropdown: React.FC<AttachmentDropdownProps> = ({
   onFileUpload,
   onYouTubeUrl,
+  onMultiFileUpload,
+  onSessionCreated,
+  sessionId,
   disabled = false
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const [showYouTubeInput, setShowYouTubeInput] = useState(false)
+  const [showMultiFileModal, setShowMultiFileModal] = useState(false)
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -51,6 +60,16 @@ export const AttachmentDropdown: React.FC<AttachmentDropdownProps> = ({
 
   const handleYouTubeClick = () => {
     setShowYouTubeInput(true)
+  }
+
+  const handleMultiFileClick = () => {
+    setShowMultiFileModal(true)
+    setIsOpen(false)
+  }
+
+  const handleMultiFileUploadComplete = (results: BatchUploadResponse) => {
+    onMultiFileUpload?.(results)
+    setShowMultiFileModal(false)
   }
 
   const handleYouTubeSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -95,7 +114,7 @@ export const AttachmentDropdown: React.FC<AttachmentDropdownProps> = ({
       {isOpen && (
         <div className="absolute bottom-full left-0 mb-2 w-64 bg-popover border rounded-md shadow-lg z-50">
           <div className="p-1">
-            {/* Upload Document option */}
+            {/* Upload Single Document option */}
             <button
               className="flex items-center w-full px-3 py-2 text-sm text-left hover:bg-accent hover:text-accent-foreground rounded-sm"
               onClick={() => document.getElementById('file-upload-hidden')?.click()}
@@ -103,6 +122,17 @@ export const AttachmentDropdown: React.FC<AttachmentDropdownProps> = ({
             >
               <Paperclip className="h-4 w-4 mr-3" />
               Upload a file
+            </button>
+
+            {/* Upload Multiple Documents option */}
+            <button
+              className="flex items-center w-full px-3 py-2 text-sm text-left hover:bg-accent hover:text-accent-foreground rounded-sm"
+              onClick={handleMultiFileClick}
+              disabled={disabled}
+              title="Upload multiple files at once"
+            >
+              <Upload className="h-4 w-4 mr-3" />
+              Upload multiple files
             </button>
 
             {/* YouTube Video option */}
@@ -134,6 +164,15 @@ export const AttachmentDropdown: React.FC<AttachmentDropdownProps> = ({
           </div>
         </div>
       )}
+
+      {/* Multi-File Upload Modal */}
+      <MultiFileUploadModal
+        isOpen={showMultiFileModal}
+        onClose={() => setShowMultiFileModal(false)}
+        sessionId={sessionId}
+        onUploadComplete={handleMultiFileUploadComplete}
+        onSessionCreated={onSessionCreated}
+      />
     </div>
   )
 }
