@@ -269,107 +269,185 @@ async def upload_document(request: UploadDocumentRequest):
 @advisor_router.post("/documents/upload-file")
 async def upload_file_with_processing(
     session_id: str = Form(...),
-    title: str = Form(...),
-    file: UploadFile = File(...)
+    files: List[UploadFile] = File(...),
+    titles: Optional[str] = Form(None)
 ):
     """
-    Enhanced file upload with full multi-modal processing.
+    Enhanced multi-file upload with full multi-modal processing.
     
-    Supports PDF, DOCX, TXT files with comprehensive:
+    Supports multiple PDF, DOCX, TXT files with comprehensive:
     - Text extraction
     - Image and chart detection  
     - Table extraction with structured data
     - Visual element descriptions
     - Warren-optimized context generation
+    - AI-powered summarization
     - Security validation
+    - Batch processing with partial success handling
     
     SCRUM-40: Enhanced Multi-Modal Document Processing
+    SCRUM-41: AI-Powered Document Summarization  
+    SCRUM-42: Multiple File Upload Support
     """
     try:
-        # Read file content
-        file_content = await file.read()
+        # Initialize processing results
+        successful_uploads = []
+        failed_uploads = []
+        total_files = len(files)
         
-        # Determine content type from filename
-        file_ext = file.filename.lower().split('.')[-1] if '.' in file.filename else ''
-        if file_ext not in ['pdf', 'docx', 'txt']:
-            raise HTTPException(status_code=400, detail=f"Unsupported file type: {file_ext}")
+        # Parse titles if provided (comma-separated or individual titles)
+        file_titles = []
+        if titles:
+            # Split by comma and strip whitespace
+            title_list = [title.strip() for title in titles.split(',')]
+            file_titles = title_list
         
-        # Process file with DocumentProcessor
-        processed_data = await document_processor.process_uploaded_file(
-            file_content=file_content,
-            filename=file.filename,
-            content_type=file_ext
-        )
-        
-        # Prepare document data for storage
-        document_data = {
-            "title": title,
-            "content_type": file_ext,
-            "full_content": processed_data["text"],
-            "original_filename": file.filename,
-            "file_size_bytes": len(file_content),
-            "metadata": {
-                # Core metadata
-                **processed_data["metadata"],
-                # Multi-modal content
-                "images": processed_data["images"],
-                "tables": processed_data["tables"],
-                "visual_summary": processed_data["visual_summary"],
-                "warren_context": processed_data["warren_context"],
-                # Processing info
-                "multi_modal_processed": True,
-                "processor_version": "1.0.0"
+        # Process each file individually
+        for idx, file in enumerate(files):
+            file_result = {
+                "filename": file.filename,
+                "index": idx,
+                "status": "processing"
             }
-        }
-        
-        # Store processed document
-        document_id = await document_manager.store_document(
-            document_data=document_data,
-            session_id=session_id
-        )
-        
-        # Generate AI summary automatically (SCRUM-41 Phase 1.3)
-        summary_success = False
-        summary_info = {}
-        try:
-            summary_success = await document_manager.update_document_with_summary(document_id)
-            if summary_success:
-                # Get summary info for response
-                updated_doc = await document_manager.retrieve_full_document(document_id)
-                if updated_doc and updated_doc.get('summary'):
-                    from src.services.context_assembler import TokenManager
-                    token_manager = TokenManager()
-                    summary_tokens = token_manager.count_tokens(updated_doc['summary'])
-                    summary_info = {
-                        "summary_generated": True,
-                        "summary_tokens": summary_tokens,
-                        "summary_preview": updated_doc['summary'][:200] + "..." if len(updated_doc['summary']) > 200 else updated_doc['summary']
+            
+            try:
+                # Get title for this file
+                if idx < len(file_titles) and file_titles[idx]:
+                    file_title = file_titles[idx]
+                else:
+                    # Generate title from filename
+                    base_name = file.filename.rsplit('.', 1)[0] if '.' in file.filename else file.filename
+                    file_title = base_name.replace('_', ' ').replace('-', ' ').title()
+                
+                # Read file content
+                file_content = await file.read()
+                
+                # Determine content type from filename
+                file_ext = file.filename.lower().split('.')[-1] if '.' in file.filename else ''
+                if file_ext not in ['pdf', 'docx', 'txt']:
+                    raise ValueError(f"Unsupported file type: {file_ext}")
+                
+                # Process file with DocumentProcessor
+                processed_data = await document_processor.process_uploaded_file(
+                    file_content=file_content,
+                    filename=file.filename,
+                    content_type=file_ext
+                )
+                
+                # Prepare document data for storage
+                document_data = {
+                    "title": file_title,
+                    "content_type": file_ext,
+                    "full_content": processed_data["text"],
+                    "original_filename": file.filename,
+                    "file_size_bytes": len(file_content),
+                    "metadata": {
+                        # Core metadata
+                        **processed_data["metadata"],
+                        # Multi-modal content
+                        "images": processed_data["images"],
+                        "tables": processed_data["tables"],
+                        "visual_summary": processed_data["visual_summary"],
+                        "warren_context": processed_data["warren_context"],
+                        # Processing info
+                        "multi_modal_processed": True,
+                        "processor_version": "1.0.0",
+                        # Batch info
+                        "batch_upload": True,
+                        "batch_index": idx,
+                        "batch_total": total_files
                     }
-        except Exception as e:
-            logger.warning(f"AI summarization failed for document {document_id}: {str(e)}")
-            summary_info = {
-                "summary_generated": False,
-                "summary_error": "AI summarization failed but document was processed successfully"
-            }
+                }
+                
+                # Store processed document
+                document_id = await document_manager.store_document(
+                    document_data=document_data,
+                    session_id=session_id
+                )
+                
+                # Generate AI summary automatically (SCRUM-41 Phase 1.3)
+                summary_success = False
+                summary_info = {}
+                try:
+                    summary_success = await document_manager.update_document_with_summary(document_id)
+                    if summary_success:
+                        # Get summary info for response
+                        updated_doc = await document_manager.retrieve_full_document(document_id)
+                        if updated_doc and updated_doc.get('summary'):
+                            from src.services.context_assembler import TokenManager
+                            token_manager = TokenManager()
+                            summary_tokens = token_manager.count_tokens(updated_doc['summary'])
+                            summary_info = {
+                                "summary_generated": True,
+                                "summary_tokens": summary_tokens,
+                                "summary_preview": updated_doc['summary'][:150] + "..." if len(updated_doc['summary']) > 150 else updated_doc['summary']
+                            }
+                except Exception as e:
+                    logger.warning(f"AI summarization failed for document {document_id}: {str(e)}")
+                    summary_info = {
+                        "summary_generated": False,
+                        "summary_error": "AI summarization failed but document was processed successfully"
+                    }
+                
+                # Update file result with success
+                file_result.update({
+                    "status": "success",
+                    "document_id": document_id,
+                    "title": file_title,
+                    "processing_results": {
+                        "text_extracted": True,
+                        "word_count": processed_data["metadata"]["word_count"],
+                        "images_detected": processed_data["metadata"]["total_images"],
+                        "tables_detected": processed_data["metadata"]["total_tables"],
+                        "visual_summary": processed_data["visual_summary"],
+                        "processing_time_ms": processed_data["metadata"]["processing_time_ms"],
+                        # AI Summarization results (SCRUM-41)
+                        **summary_info
+                    }
+                })
+                
+                successful_uploads.append(file_result)
+                
+            except Exception as file_error:
+                # Handle individual file failure
+                file_result.update({
+                    "status": "failed",
+                    "error": str(file_error),
+                    "error_type": type(file_error).__name__
+                })
+                failed_uploads.append(file_result)
+                logger.error(f"Failed to process file {file.filename}: {str(file_error)}")
         
-        return {
-            "status": "success",
-            "document_id": document_id,
-            "message": f"Multi-modal processing complete for '{title}'" + (" with AI summary" if summary_success else ""),
-            "processing_results": {
-                "text_extracted": True,
-                "word_count": processed_data["metadata"]["word_count"],
-                "images_detected": processed_data["metadata"]["total_images"],
-                "tables_detected": processed_data["metadata"]["total_tables"],
-                "visual_summary": processed_data["visual_summary"],
-                "processing_time_ms": processed_data["metadata"]["processing_time_ms"],
-                # AI Summarization results (SCRUM-41)
-                **summary_info
+        # Prepare batch response
+        batch_success = len(successful_uploads) > 0
+        response = {
+            "status": "success" if batch_success else "failed",
+            "message": f"Batch upload complete: {len(successful_uploads)}/{total_files} files processed successfully",
+            "batch_results": {
+                "total_files": total_files,
+                "successful_count": len(successful_uploads),
+                "failed_count": len(failed_uploads),
+                "success_rate": len(successful_uploads) / total_files if total_files > 0 else 0,
+                "successful_uploads": successful_uploads,
+                "failed_uploads": failed_uploads
             }
         }
         
+        # Return appropriate status code
+        if not batch_success:
+            raise HTTPException(status_code=400, detail=response)
+        elif failed_uploads:
+            # Partial success - return 207 Multi-Status if possible, otherwise 200 with warnings
+            response["status"] = "partial_success"
+            response["message"] = f"Partial success: {len(successful_uploads)}/{total_files} files processed"
+        
+        return response
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"File processing failed: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Batch file processing failed: {str(e)}")
 
 @advisor_router.get("/documents/{document_id}")
 async def get_document(document_id: str):
