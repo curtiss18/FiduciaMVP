@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { WarrenResponse, ContentType, AudienceType, Contact, Audience } from './types';
+import { WarrenResponse, ContentType, AudienceType, Contact, Audience, BatchUploadResponse, SessionDocument } from './types';
 
 // Base API client for communicating with FastAPI backend
 const api = axios.create({
@@ -176,6 +176,37 @@ export const advisorApi = {
 
   restoreContent: async (contentId: string, advisorId: string) => {
     return advisorApi.updateContentStatus(contentId, advisorId, 'draft', 'Content restored from archive');
+  },
+
+  // Document Management (SCRUM-46)
+  uploadDocuments: async (sessionId: string, files: File[], titles?: string[]): Promise<BatchUploadResponse> => {
+    const formData = new FormData();
+    formData.append('session_id', sessionId);
+    
+    // Add files to form data
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+    
+    // Add titles if provided (comma-separated)
+    if (titles && titles.length > 0) {
+      formData.append('titles', titles.join(', '));
+    }
+    
+    const response = await api.post('/advisor/documents/upload-file', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 60000, // 60 seconds for file processing
+    });
+    return response.data;
+  },
+
+  getSessionDocuments: async (sessionId: string, advisorId: string = 'demo_advisor_001'): Promise<{ documents: SessionDocument[] }> => {
+    const response = await api.get(`/advisor/sessions/${sessionId}/documents`, {
+      params: { advisor_id: advisorId }
+    });
+    return { documents: response.data.documents || [] };
   }
 };
 

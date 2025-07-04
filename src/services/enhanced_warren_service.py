@@ -20,6 +20,7 @@ from src.services.prompt_service import prompt_service
 from src.services.conversation_manager import ConversationManager
 from src.services.context_assembler import ContextAssembler, TokenManager
 from src.services.advanced_context_assembler import AdvancedContextAssembler
+from src.services.document_manager import DocumentManager
 from src.core.database import AsyncSessionLocal
 from src.models.refactored_database import ContentType, AudienceType
 
@@ -34,6 +35,7 @@ class EnhancedWarrenService:
         self.vector_similarity_threshold = 0.1  # Very low for debugging - see what scores we get
         self.min_results_threshold = 1  # Minimum results before falling back
         self.enable_vector_search = True  # Feature flag
+        self.document_manager = DocumentManager()  # NEW: Document manager for session documents
     
     async def generate_content_with_enhanced_context(
         self,
@@ -75,6 +77,47 @@ class EnhancedWarrenService:
                 if not session_id:
                     logger.info(f"🔄 No session_id provided, skipping conversation context")
             
+            # NEW: Get session documents for document context (SCRUM-51)
+            session_documents = []
+            if session_id:
+                logger.info(f"📄 Getting session documents for session {session_id}")
+                try:
+                    documents = await self.document_manager.get_session_documents(
+                        session_id=session_id,
+                        include_content=True  # We need summaries, which requires include_content=True
+                    )
+                    
+                    logger.info(f"🔍 DEBUG: Found {len(documents)} total documents for session")
+                    for idx, doc in enumerate(documents):
+                        logger.info(f"   📄 Document {idx+1}: {doc.get('title', 'Unknown')}")
+                        logger.info(f"      Status: {doc.get('processing_status', 'Unknown')}")
+                        logger.info(f"      Has Summary: {bool(doc.get('summary'))}")
+                        logger.info(f"      Summary Length: {len(doc.get('summary', '')) if doc.get('summary') else 0}")
+                    
+                    # Filter for processed documents with summaries
+                    for doc in documents:
+                        if doc.get('processing_status') == 'processed' and doc.get('summary'):
+                            session_documents.append({
+                                'title': doc['title'],
+                                'summary': doc['summary'],
+                                'content_type': doc['content_type'],
+                                'word_count': doc.get('word_count', 0),
+                                'document_id': doc['id']
+                            })
+                    
+                    if session_documents:
+                        logger.info(f"✅ Found {len(session_documents)} processed documents with summaries")
+                        for doc in session_documents:
+                            logger.info(f"   📄 {doc['title']} ({doc['content_type']}) - {doc['word_count']} words")
+                    else:
+                        logger.info(f"❌ No processed documents with summaries found for session {session_id}")
+                        
+                except Exception as e:
+                    logger.warning(f"Failed to retrieve session documents: {str(e)}")
+                    session_documents = []
+            else:
+                logger.info(f"🔄 No session_id provided, skipping session documents")
+            
             # Try vector search first (primary method)
             context_data = await self._get_vector_search_context(
                 user_request, content_type, content_type_enum, audience_type
@@ -97,8 +140,9 @@ class EnhancedWarrenService:
                 context_data["fallback_used"] = False
                 context_data["search_strategy"] = "vector"  # Explicitly set vector strategy
             
-            # NEW: Add conversation context and session info to context_data
+            # NEW: Add conversation context, session documents, and session info to context_data
             context_data["conversation_context"] = conversation_context
+            context_data["session_documents"] = session_documents  # NEW: Document context (SCRUM-51)
             context_data["session_id"] = session_id  # Pass session_id to ContextAssembler
             
             # Generate content with Warren using the assembled context
@@ -123,12 +167,15 @@ class EnhancedWarrenService:
                 "total_knowledge_sources": context_data.get("total_sources", 0),
                 "marketing_examples_count": len(context_data.get("marketing_examples", [])),
                 "compliance_rules_count": len(context_data.get("disclaimers", [])),
+                "session_documents_count": len(session_documents),  # NEW: Document count (SCRUM-51)
+                "session_documents_used": [doc['title'] for doc in session_documents],  # NEW: Document titles (SCRUM-51)
                 "fallback_used": context_data.get("fallback_used", False),
                 "fallback_reason": context_data.get("fallback_reason"),
                 "context_quality_score": context_quality.get("score", 0.5),
                 "user_request": user_request,
-                "conversation_context_used": bool(conversation_context),  # NEW: Track context usage
-                "session_id": session_id  # NEW: Include session_id in response
+                "conversation_context_used": bool(conversation_context),  # Track context usage
+                "session_documents_available": bool(session_documents),  # NEW: Document availability (SCRUM-51)
+                "session_id": session_id  # Include session_id in response
             }
             
         except Exception as e:
@@ -371,19 +418,45 @@ class EnhancedWarrenService:
                     # Use main system prompt
                     base_system_prompt = prompt_service.get_warren_system_prompt(prompt_context)
                 
-                # Build final prompt with Phase 2 optimized context
+                # Build final prompt with Phase 2 optimized context and document awareness
                 optimized_context = assembly_result["context"]
+                
+                # DEBUG: Log the assembled context to see if documents are included
+                logger.info(f"🔍 ASSEMBLED CONTEXT DEBUG:")
+                logger.info(f"   Context Length: {len(optimized_context)} characters")
+                if "## Document Summaries" in optimized_context:
+                    logger.info(f"   ✅ Document Summaries found in context")
+                else:
+                    logger.info(f"   ❌ Document Summaries NOT found in context")
+                
+                # Check if we have session documents to reference
+                has_documents = len(context_data.get("session_documents", [])) > 0
+                logger.info(f"   Has Documents: {has_documents}")
+                if has_documents:
+                    logger.info(f"   Document Count: {len(context_data.get('session_documents', []))}")
+                
+                document_instruction = ""
+                if has_documents:
+                    document_titles = [doc['title'] for doc in context_data.get("session_documents", [])]
+                    document_instruction = f"""
+
+IMPORTANT: You have access to the following uploaded documents in this session:
+{', '.join(document_titles)}
+
+Please reference and incorporate information from these documents when creating content. These documents contain specific information about the advisor's services, strategies, and expertise that should inform your content generation."""
+
                 final_prompt = f"""{base_system_prompt}
 
-{optimized_context}
+{optimized_context}{document_instruction}
 
-Based on the above information, please create compliant marketing content that:
+Based on the above information{" and uploaded documents" if has_documents else ""}, please create compliant marketing content that:
 1. Follows all SEC Marketing Rule and FINRA 2210 requirements
 2. Includes appropriate disclaimers and risk disclosures
 3. Uses educational tone rather than promotional claims
 4. Avoids performance predictions or guarantees
 5. Is appropriate for the specified platform/content type
 6. References the style and structure of the approved examples
+{f"7. Incorporates relevant information from the uploaded documents: {', '.join(document_titles)}" if has_documents else ""}
 
 Remember to wrap your final marketing content in ##MARKETINGCONTENT## delimiters.
 

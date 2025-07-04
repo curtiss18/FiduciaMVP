@@ -196,3 +196,52 @@ export interface AudienceStatistics {
   total_relationships: number
   avg_contacts_per_audience: number
 }
+
+// Document Management Types (SCRUM-46)
+export interface DocumentUploadResult {
+  filename: string
+  index: number
+  status: 'success' | 'failed'
+  document_id?: string
+  title?: string
+  processing_results?: {
+    text_extracted: boolean
+    word_count: number
+    images_detected: number
+    tables_detected: number
+    visual_summary: string
+    processing_time_ms: number
+    summary_generated?: boolean
+    summary_tokens?: number
+    summary_preview?: string
+  }
+  error?: string
+  error_type?: string
+}
+
+export interface BatchUploadResponse {
+  status: 'success' | 'partial_success' | 'failed'
+  message: string
+  batch_results: {
+    total_files: number
+    successful_count: number
+    failed_count: number
+    success_rate: number
+    successful_uploads: DocumentUploadResult[]
+    failed_uploads: DocumentUploadResult[]
+  }
+}
+
+export interface SessionDocument {
+  document_id: string
+  title: string
+  content_type: string
+  original_filename: string
+  file_size_bytes: number
+  word_count: number
+  upload_timestamp: string
+  processing_status: 'pending' | 'processed' | 'failed'
+  summary?: string
+  summary_tokens?: number
+  metadata: any
+}

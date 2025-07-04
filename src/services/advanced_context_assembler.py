@@ -81,34 +81,38 @@ class RelevanceAnalyzer:
         
         Higher scores indicate more relevant content for the current request.
         """
-        scores = []
-        
-        # 1. Keyword overlap analysis
-        keyword_score = self._calculate_keyword_overlap(content, user_request)
-        scores.append(('keyword_overlap', keyword_score, 0.3))
-        
-        # 2. Financial domain relevance
-        financial_score = self._calculate_financial_relevance(content, user_request)
-        scores.append(('financial_relevance', financial_score, 0.25))
-        
-        # 3. Content type alignment
-        content_type_score = self._calculate_content_type_relevance(content, content_type)
-        scores.append(('content_type_alignment', content_type_score, 0.2))
-        
-        # 4. Semantic similarity (simplified)
-        semantic_score = self._calculate_semantic_similarity(content, user_request)
-        scores.append(('semantic_similarity', semantic_score, 0.15))
-        
-        # 5. Content quality indicators
-        quality_score = self._calculate_content_quality(content, context_metadata)
-        scores.append(('content_quality', quality_score, 0.1))
-        
-        # Calculate weighted average
-        total_score = sum(score * weight for _, score, weight in scores)
-        
-        logger.debug(f"Relevance scores: {[(name, f'{score:.3f}') for name, score, _ in scores]} -> {total_score:.3f}")
-        
-        return min(1.0, max(0.0, total_score))
+        try:
+            scores = []
+            
+            # 1. Keyword overlap analysis
+            keyword_score = self._calculate_keyword_overlap(content, user_request)
+            scores.append(('keyword_overlap', keyword_score, 0.3))
+            
+            # 2. Financial domain relevance
+            financial_score = self._calculate_financial_relevance(content, user_request)
+            scores.append(('financial_relevance', financial_score, 0.25))
+            
+            # 3. Content type alignment
+            content_type_score = self._calculate_content_type_relevance(content, content_type)
+            scores.append(('content_type_alignment', content_type_score, 0.2))
+            
+            # 4. Semantic similarity (simplified)
+            semantic_score = self._calculate_semantic_similarity(content, user_request)
+            scores.append(('semantic_similarity', semantic_score, 0.15))
+            
+            # 5. Content quality indicators
+            quality_score = self._calculate_content_quality(content, context_metadata)
+            scores.append(('content_quality', quality_score, 0.1))
+            
+            # Calculate weighted average
+            total_score = sum(score * weight for _, score, weight in scores)
+            
+            logger.debug(f"Relevance scores: {[(name, f'{score:.3f}') for name, score, _ in scores]} -> {total_score:.3f}")
+            
+            return min(1.0, max(0.0, total_score))
+        except Exception as e:
+            logger.warning(f"Error calculating relevance score: {e}, returning default 0.5")
+            return 0.5
     
     def _calculate_keyword_overlap(self, content: str, user_request: str) -> float:
         """Calculate keyword overlap between content and user request."""
@@ -194,9 +198,11 @@ class RelevanceAnalyzer:
         
         # Metadata quality
         if metadata:
-            if metadata.get('compliance_score', 0) > 0.8:
+            compliance_score = metadata.get('compliance_score', 0)
+            if compliance_score is not None and compliance_score > 0.8:
                 quality_score += 0.1
-            if metadata.get('usage_count', 0) > 0:
+            usage_count = metadata.get('usage_count', 0)
+            if usage_count is not None and usage_count > 0:
                 quality_score += 0.05
         
         return min(1.0, quality_score)
@@ -282,6 +288,10 @@ class AdvancedContextAssembler(ContextAssembler):
             
         except Exception as e:
             logger.error(f"Error in Phase 2 context assembly: {e}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            logger.error(f"Exception details: {str(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             # Fallback to Phase 1 implementation
             return await super().build_warren_context(
                 session_id, user_input, context_data, current_content, youtube_context
@@ -327,7 +337,7 @@ class AdvancedContextAssembler(ContextAssembler):
         
         # Conversation history with relevance analysis
         conversation_context = await self._get_enhanced_conversation_context(session_id, user_input)
-        if conversation_context:
+        if conversation_context is not None:
             elements.append(conversation_context)
         
         # Enhanced compliance sources
@@ -343,6 +353,13 @@ class AdvancedContextAssembler(ContextAssembler):
         if youtube_context:
             youtube_element = self._extract_enhanced_youtube_context(youtube_context, user_input)
             elements.append(youtube_element)
+        
+        # NEW: Session documents context (SCRUM-51)
+        if context_data and context_data.get('session_documents'):
+            document_elements = self._extract_enhanced_document_context(
+                context_data['session_documents'], user_input
+            )
+            elements.extend(document_elements)
         
         logger.info(f"Gathered {len(elements)} enhanced context elements")
         return elements
@@ -503,6 +520,57 @@ class AdvancedContextAssembler(ContextAssembler):
             }
         )
     
+    def _extract_enhanced_document_context(
+        self, 
+        session_documents: List[Dict[str, Any]], 
+        user_input: str
+    ) -> List[ContextElement]:
+        """
+        Extract session document context with relevance analysis (SCRUM-51).
+        """
+        document_elements = []
+        
+        for doc in session_documents:
+            # Build document context content
+            content_parts = [f"## DOCUMENT: {doc['title']}"]
+            content_parts.append(f"Document Type: {doc['content_type'].upper()}")
+            content_parts.append(f"Word Count: {doc.get('word_count', 'Unknown')}")
+            
+            # Add document summary (the AI-generated summary from SCRUM-41)
+            if doc.get('summary'):
+                content_parts.append("**DOCUMENT SUMMARY:**")
+                content_parts.append(doc['summary'])
+            
+            content = "\n".join(content_parts)
+            
+            # Calculate relevance score between document summary and user request
+            relevance_score = self.relevance_analyzer.calculate_relevance_score(
+                doc.get('summary', ''), user_input, "document_summary", doc
+            )
+            
+            # Priority score based on document type and relevance
+            base_priority = 0.6  # Documents are important but not as critical as compliance
+            priority_score = base_priority + (0.3 * relevance_score)  # Boost based on relevance
+            
+            document_elements.append(ContextElement(
+                content=content,
+                context_type=ContextType.DOCUMENT_SUMMARIES,  # Use proper context type for documents
+                priority_score=priority_score,
+                relevance_score=relevance_score,
+                token_count=self.token_manager.count_tokens(content),
+                source_metadata={
+                    "type": "session_document",
+                    "document_id": doc.get('document_id'),
+                    "document_title": doc['title'],
+                    "document_type": doc['content_type'],
+                    "word_count": doc.get('word_count', 0),
+                    "is_ai_summary": True  # This is an AI-generated summary
+                }
+            ))
+        
+        logger.info(f"Extracted {len(document_elements)} document context elements")
+        return document_elements
+    
     async def _prioritize_context_with_relevance(
         self,
         context_elements: List[ContextElement],
@@ -515,10 +583,14 @@ class AdvancedContextAssembler(ContextAssembler):
         """
         # Calculate combined scores for each element
         for element in context_elements:
+            # Ensure we never have None values - use defaults if needed
+            priority_score = element.priority_score if element.priority_score is not None else 0.5
+            relevance_score = element.relevance_score if element.relevance_score is not None else 0.5
+            
             # Combine priority and relevance with configurable weights
             element.combined_score = (
-                element.priority_score * self.priority_score_weight + 
-                element.relevance_score * self.relevance_score_weight
+                priority_score * self.priority_score_weight + 
+                relevance_score * self.relevance_score_weight
             )
         
         # Group by context type for balanced selection
@@ -605,8 +677,8 @@ class AdvancedContextAssembler(ContextAssembler):
         total_relevance = sum(elem.relevance_score for elem in context_elements)
         avg_relevance = total_relevance / len(context_elements)
         
-        high_priority_count = sum(1 for elem in context_elements if elem.priority_score > 0.8)
-        high_relevance_count = sum(1 for elem in context_elements if elem.relevance_score > 0.7)
+        high_priority_count = sum(1 for elem in context_elements if elem.priority_score is not None and elem.priority_score > 0.8)
+        high_relevance_count = sum(1 for elem in context_elements if elem.relevance_score is not None and elem.relevance_score > 0.7)
         
         # Context type diversity
         context_types = set(elem.context_type for elem in context_elements)
@@ -648,10 +720,15 @@ class AdvancedContextAssembler(ContextAssembler):
         for element in context_elements:
             grouped[element.context_type].append(element)
         
+        logger.info(f"Context groups found: {list(grouped.keys())}")
+        if ContextType.DOCUMENT_SUMMARIES in grouped:
+            logger.info(f"Document summaries group has {len(grouped[ContextType.DOCUMENT_SUMMARIES])} elements")
+        
         # Add elements in logical order with enhanced formatting
         for context_type in [
             ContextType.COMPLIANCE_SOURCES,
             ContextType.VECTOR_SEARCH_RESULTS,
+            ContextType.DOCUMENT_SUMMARIES,  # NEW: Add session documents to context
             ContextType.CONVERSATION_HISTORY,
             ContextType.CURRENT_CONTENT,
             ContextType.YOUTUBE_CONTEXT,
@@ -660,12 +737,17 @@ class AdvancedContextAssembler(ContextAssembler):
             if context_type in grouped:
                 # Add section header
                 section_name = context_type.value.replace('_', ' ').title()
-                context_parts.append(f"\n## {section_name}")
+                section_header = f"\n## {section_name}"
+                context_parts.append(section_header)
+                logger.info(f"Added section header: {section_header.strip()}")
                 
                 # Add elements with relevance indicators
                 for element in grouped[context_type]:
-                    relevance_indicator = "⭐" if element.relevance_score > 0.8 else "▶"
+                    relevance_indicator = "⭐" if (element.relevance_score is not None and element.relevance_score > 0.8) else "▶"
                     context_parts.append(f"\n{relevance_indicator} {element.content}")
+                    
+                if context_type == ContextType.DOCUMENT_SUMMARIES:
+                    logger.info(f"Added {len(grouped[context_type])} document summary elements")
         
         return "\n".join(context_parts)
 

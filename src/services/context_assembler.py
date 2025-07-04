@@ -68,10 +68,11 @@ class ContextAssembler:
             ContextType.SYSTEM_PROMPT: 5000,
             ContextType.CURRENT_CONTENT: 15000,
             ContextType.CONVERSATION_HISTORY: 25000,
+            ContextType.DOCUMENT_SUMMARIES: 20000,  # NEW: Add document summaries to refinement mode
             ContextType.COMPLIANCE_SOURCES: 20000,
             ContextType.VECTOR_SEARCH_RESULTS: 15000,
             ContextType.USER_INPUT: 2000,
-            "buffer": 118000  # Larger buffer for refinement output
+            "buffer": 98000  # Reduced buffer to accommodate document summaries
         },
         RequestType.ANALYSIS: {
             ContextType.SYSTEM_PROMPT: 5000,
