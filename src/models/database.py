@@ -72,7 +72,8 @@ class GeneratedContent(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
-# Import advisor workflow models to ensure tables are created
+# Import all models to ensure tables are created
 from src.models.advisor_workflow_models import *
 from src.models.refactored_database import *
 from src.models.audiences import *
+from src.models.compliance_models import *

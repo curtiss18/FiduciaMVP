@@ -102,14 +102,24 @@ class AdvisorContent(Base):
     status = Column(String(30), default="draft", index=True)  # PostgreSQL enum: contentstatus
     advisor_notes = Column(Text, nullable=True)
     
-    # Compliance workflow
+    # Compliance workflow (NEW FIELDS - added during SCRUM-54)
+    cco_review_status = Column(String(50), default="not_submitted", index=True)  # not_submitted, submitted, in_review, approved, rejected, revision_requested
+    cco_email = Column(String(255), nullable=True, index=True)  # CCO email for review
     submitted_for_review_at = Column(DateTime(timezone=True), nullable=True)
+    review_deadline = Column(DateTime(timezone=True), nullable=True)
+    review_priority = Column(String(20), default="normal")  # low, normal, high, urgent
+    
+    # Legacy compliance fields (keeping for backward compatibility)
     assigned_to_compliance_id = Column(String(50), nullable=True, index=True)
     compliance_due_date = Column(DateTime(timezone=True), nullable=True)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), default=func.now())
     updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+    
+    # Relationships (will be available after compliance_models import)
+    # Note: The ContentReview -> AdvisorContent relationship is defined in compliance_models.py
+    # This creates a backref called 'reviews' on AdvisorContent
 
 
 class ComplianceReviews(Base):
