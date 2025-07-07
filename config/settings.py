@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     openai_api_key: str
     searchapi_key: str
     
+    # Security
+    token_secret_key: Optional[str] = None  # For compliance token signing
+    
     # Database
     database_url: str = "postgresql+asyncpg://user:password@localhost/fiducia_mvp"
     

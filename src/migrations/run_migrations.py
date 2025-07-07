@@ -18,7 +18,6 @@ import logging
 # Import migration functions using clean file names
 from src.migrations.advisor_content_compliance_fields import migrate_advisor_content_compliance_fields
 from src.migrations.create_compliance_tables import create_compliance_tables
-from src.migrations.sample_data_compliance import create_all_sample_data
 
 # Set up logging
 logging.basicConfig(
@@ -43,11 +42,6 @@ async def run_all_migrations():
         logger.info("📝 Step 2: Creating compliance portal tables...")
         await create_compliance_tables()
         logger.info("✅ Step 2 completed successfully!")
-        
-        # Migration 3: Create sample data
-        logger.info("📝 Step 3: Creating sample data for testing...")
-        await create_all_sample_data()
-        logger.info("✅ Step 3 completed successfully!")
         
         logger.info("=" * 60)
         logger.info("🎉 ALL MIGRATIONS COMPLETED SUCCESSFULLY!")
