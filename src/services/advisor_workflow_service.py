@@ -28,6 +28,7 @@ from src.models.advisor_workflow_models import (
 )
 from src.models.refactored_database import ContentType, AudienceType
 from src.core.database import AsyncSessionLocal
+from src.services.email_service import email_service
 
 logger = logging.getLogger(__name__)
 
@@ -599,39 +600,30 @@ class AdvisorWorkflowService:
     ) -> bool:
         """Send email notification to CCO about content review request."""
         try:
-            # Basic email template for now
+            # Create review URL
             review_url = f"http://localhost:3003/review/{review_token}"
             
-            subject = f"Content Review Request: {content.title}"
+            # Send email using our email service
+            success = await email_service.send_review_notification(
+                to_email=cco_email,
+                content_title=content.title,
+                content_type=content.content_type,
+                advisor_id=content.advisor_id,
+                review_url=review_url,
+                notes=notes
+            )
             
-            email_body = f"""
-Dear Compliance Officer,
-
-A new content piece has been submitted for your review:
-
-Title: {content.title}
-Content Type: {content.content_type}
-Submitted By: {content.advisor_id}
-{f'Notes: {notes}' if notes else ''}
-
-Please review this content by clicking the link below:
-{review_url}
-
-Best regards,
-Fiducia Compliance System
-            """
+            if success:
+                logger.info(f"✅ Review notification email sent successfully to {cco_email}")
+                logger.info(f"📄 Content: {content.title}")
+                logger.info(f"🔗 Review URL: {review_url}")
+            else:
+                logger.error(f"❌ Failed to send review notification email to {cco_email}")
             
-            # TODO: Implement actual email sending
-            # For now, just log the email
-            logger.info(f"Email notification sent to {cco_email}")
-            logger.info(f"Subject: {subject}")
-            logger.info(f"Review URL: {review_url}")
-            logger.info(f"Email Body: {email_body}")
-            
-            return True
+            return success
             
         except Exception as e:
-            logger.error(f"Failed to send email notification: {e}")
+            logger.error(f"❌ Exception in _send_review_notification: {e}")
             return False
 
     async def update_content(

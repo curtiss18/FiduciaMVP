@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     # CORS - Adding wildcard for development
     backend_cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:8000", "http://127.0.0.1:3002"]
     
+    # Email Settings (SendGrid)
+    sendgrid_api_key: Optional[str] = None
+    sendgrid_from_email: str = "notifications@fiducia.ai"
+    sendgrid_from_name: str = "Fiducia Compliance System"
+    
     class Config:
         env_file = ".env"
 

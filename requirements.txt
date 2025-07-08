@@ -44,3 +44,6 @@ chardet==5.2.0        # Character encoding detection
 cryptography==41.0.7
 pyjwt==2.8.0
 python-multipart==0.0.6
+
+# Email Service
+sendgrid==6.11.0
