@@ -80,13 +80,6 @@ export const warrenApi = {
       content_type: contentType,
       audience_type: audienceType,
     }),
-  
-  // Generate content with Warren V2 (fallback)
-  generateV2: (request: string, contentType: string) =>
-    api.post('/warren/generate-v2', {
-      request,
-      content_type: contentType,
-    }),
 };
 
 // System API
