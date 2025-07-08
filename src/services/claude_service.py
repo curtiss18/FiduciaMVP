@@ -1,3 +1,4 @@
+import asyncio
 from anthropic import Anthropic
 from config.settings import settings
 
@@ -9,7 +10,9 @@ class ClaudeService:
     async def generate_content(self, prompt: str, max_tokens: int = 1000) -> str:
         """Generate content using Claude AI"""
         try:
-            message = self.client.messages.create(
+            # Run the synchronous API call in a thread pool
+            message = await asyncio.to_thread(
+                self.client.messages.create,
                 model="claude-3-5-sonnet-20241022",
                 max_tokens=max_tokens,
                 messages=[
