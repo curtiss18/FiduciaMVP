@@ -14,8 +14,8 @@ Responsibilities:
 import logging
 from typing import List, Dict, Any, Optional
 
-from src.services.vector_search_service import vector_search_service
-from src.services.warren_database_service import warren_db_service
+from src.services.vector_search_service import VectorSearchService
+from src.services.warren_database_service import WarrenDatabaseService
 from src.models.refactored_database import ContentType
 
 logger = logging.getLogger(__name__)
@@ -30,8 +30,8 @@ class ContextRetrievalService:
                  min_results_threshold: int = 1):
         """Initialize the context retrieval service."""
         # Dependency injection for testing, with defaults for production
-        self.vector_search_service = vector_search_service or globals()['vector_search_service']
-        self.warren_db_service = warren_db_service or globals()['warren_db_service']
+        self.vector_search_service = vector_search_service or VectorSearchService()
+        self.warren_db_service = warren_db_service or WarrenDatabaseService()
         
         # Configuration (matching enhanced_warren_service defaults)
         self.enable_vector_search = enable_vector_search
