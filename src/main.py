@@ -4,6 +4,7 @@ from config.settings import settings
 from src.api.endpoints import router
 from src.api.advisor_workflow_endpoints import advisor_router
 from src.api.audience_endpoints import router as audience_router
+from src.api.compliance_endpoints import compliance_router
 import logging
 
 # Configure logging
@@ -30,7 +31,8 @@ app.add_middleware(
 # Include routers
 app.include_router(router, prefix=settings.api_v1_str)
 app.include_router(advisor_router, prefix=settings.api_v1_str)  # Advisor workflow endpoints
-app.include_router(audience_router, prefix=settings.api_v1_str)  # NEW: Audience CRUD endpoints
+app.include_router(audience_router, prefix=settings.api_v1_str)  # Audience CRUD endpoints
+app.include_router(compliance_router, prefix=settings.api_v1_str)  # NEW: Compliance portal endpoints
 
 # Root endpoint
 @app.get("/")

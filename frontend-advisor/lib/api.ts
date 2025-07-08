@@ -169,6 +169,17 @@ export const advisorApi = {
     return response.data;
   },
 
+  // Submit for Review functionality
+  submitContentForReview: async (contentId: string, advisorId: string, ccoEmail?: string, notes?: string) => {
+    const response = await api.post(`/advisor/content/${contentId}/submit-review`, {
+      cco_email: ccoEmail || 'curtis@fiduciaapp.com',
+      notes: notes
+    }, {
+      params: { advisor_id: advisorId }
+    });
+    return response.data;
+  },
+
   // Archive/Restore functionality
   archiveContent: async (contentId: string, advisorId: string) => {
     return advisorApi.updateContentStatus(contentId, advisorId, 'archived', 'Content archived by user');

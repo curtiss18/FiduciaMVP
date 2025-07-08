@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/layout'
 import { MessageHistory } from './MessageHistory'
 import { ChatInput } from './ChatInput'
 import { SourceInfoBadges } from '@/components/content'
+import { SubmitReviewModal } from './SubmitReviewModal'
 import { Button } from '@/components/ui/button'
 import { Copy, Save, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -36,6 +37,10 @@ export const ChatInterface: React.FC = () => {
   // Resize state for dynamic panel widths
   const [chatWidth, setChatWidth] = useState(30) // Default: 30% chat, 70% content
   const [isResizing, setIsResizing] = useState(false)
+
+  // Submit for review modal state
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false)
+  const [isSubmittingForReview, setIsSubmittingForReview] = useState(false)
 
   // Generate unique message ID
   const generateMessageId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -650,16 +655,116 @@ export const ChatInterface: React.FC = () => {
   }
 
   const handleSubmitForReview = () => {
-    addMessage({
-      role: 'warren',
-      content: '📋 Content submitted for compliance review! Your compliance officer will be notified. (Full review workflow coming in next update)',
-      type: 'text'
-    })
-    
-    setConversation(prev => ({
-      ...prev,
-      status: 'submitted'
-    }))
+    // Open the modal for CCO email input
+    setIsSubmitModalOpen(true)
+  }
+
+  const handleSubmitReviewConfirm = async (ccoEmail: string, notes: string) => {
+    try {
+      setIsSubmittingForReview(true)
+
+      // Step 1: Ensure content is saved first (auto-save if needed)
+      let contentId = sessionContentId
+
+      if (!contentId && generatedContent) {
+        // Auto-save the generated content to get a content ID
+        try {
+          console.log('Auto-saving content before submission...')
+          
+          // Map content type to valid backend values
+          const mapContentType = (type: string) => {
+            const typeMap: Record<string, string> = {
+              'general': 'linkedin_post',
+              'social_media': 'linkedin_post', 
+              'linkedin': 'linkedin_post',
+              'twitter': 'x_post',
+              'email': 'email_template',
+              'website': 'website_copy',
+              'newsletter': 'newsletter',
+              'blog': 'website_blog'
+            }
+            return typeMap[type.toLowerCase()] || 'linkedin_post'
+          }
+
+          const mapAudienceType = (type: string) => {
+            const audienceMap: Record<string, string> = {
+              'general_education': 'general_education',
+              'high_net_worth': 'existing_clients',
+              'retirees': 'existing_clients',
+              'young_professionals': 'new_prospects',
+              'institutional': 'existing_clients',
+              'prospects': 'new_prospects'
+            }
+            return audienceMap[type.toLowerCase()] || 'general_education'
+          }
+
+          const contentData = {
+            advisorId,
+            title: generatedContent.title || 'Generated Content',
+            contentText: generatedContent.content,
+            contentType: mapContentType(generatedContent.contentType),
+            audienceType: mapAudienceType(generatedContent.audience || 'general_education'),
+            sourceSessionId: advisorSession || undefined,
+            advisorNotes: 'Auto-saved for compliance review',
+            intendedChannels: [generatedContent.platform.toLowerCase()],
+            sourceMetadata: generatedContent.sourceInfo
+          }
+
+          const saveResponse = await advisorApi.saveContent(contentData)
+          contentId = saveResponse.content.id
+          setSessionContentId(contentId)
+          setIsSessionSaved(true)
+          
+          console.log('Content auto-saved with ID:', contentId)
+        } catch (saveError) {
+          console.error('Failed to auto-save content:', saveError)
+          throw new Error('Unable to save content before submission. Please save manually first.')
+        }
+      }
+
+      if (!contentId) {
+        throw new Error('No content to submit. Please generate and save content first.')
+      }
+
+      // Step 2: Submit for review using the API
+      console.log('Submitting content for review...', { contentId, ccoEmail, notes })
+      
+      const submitResponse = await advisorApi.submitContentForReview(
+        contentId.toString(), 
+        advisorId, 
+        ccoEmail, 
+        notes
+      )
+
+      if (submitResponse.status === 'success') {
+        // Success! Add confirmation message to chat
+        addMessage({
+          role: 'warren',
+          content: `✅ Content submitted for compliance review!\n\n📧 **Email sent to:** ${ccoEmail}\n🔗 **Review Token:** ${submitResponse.review_token?.substring(0, 20)}...\n\n⏱️ Your CCO will receive a secure link to review your content. You'll be notified once the review is complete.`,
+          type: 'text'
+        })
+
+        // Update conversation status
+        setConversation(prev => ({
+          ...prev,
+          status: 'submitted'
+        }))
+      } else {
+        throw new Error(submitResponse.error || 'Failed to submit content for review')
+      }
+      
+    } catch (error: any) {
+      console.error('Submit for review failed:', error)
+      
+      // Show error message in chat
+      addMessage({
+        role: 'warren',
+        content: `❌ Failed to submit content for review: ${error?.message || 'Unknown error'}\n\nPlease try again or contact support if the issue persists.`,
+        type: 'error'
+      })
+    } finally {
+      setIsSubmittingForReview(false)
+    }
   }
 
   const handleRegenerate = () => {
@@ -1130,6 +1235,15 @@ export const ChatInterface: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Submit for Review Modal */}
+      <SubmitReviewModal
+        isOpen={isSubmitModalOpen}
+        onClose={() => setIsSubmitModalOpen(false)}
+        onSubmit={handleSubmitReviewConfirm}
+        contentTitle={generatedContent?.title || 'Generated Content'}
+        isSubmitting={isSubmittingForReview}
+      />
     </div>
   )
 }

@@ -48,6 +48,10 @@ class UpdateContentStatusRequest(BaseModel):
     new_status: str
     advisor_notes: Optional[str] = None
 
+class SubmitForReviewRequest(BaseModel):
+    cco_email: Optional[str] = "curtis@fiduciaapp.com"  # Default CCO email
+    notes: Optional[str] = None  # Optional notes for the CCO
+
 # ===== WARREN CONVERSATION ENDPOINTS =====
 
 @advisor_router.post("/sessions/create")
@@ -205,6 +209,25 @@ async def get_content_statistics(
 ):
     """Get advisor's content statistics."""
     result = await advisor_workflow_service.get_content_statistics(advisor_id)
+    
+    if result["status"] == "error":
+        raise HTTPException(status_code=400, detail=result["error"])
+    
+    return result
+
+@advisor_router.post("/content/{content_id}/submit-review")
+async def submit_content_for_review(
+    content_id: int,
+    request: SubmitForReviewRequest,
+    advisor_id: str = Query(..., description="Advisor ID for access control")
+):
+    """Submit content for CCO compliance review."""
+    result = await advisor_workflow_service.submit_content_for_review(
+        content_id=content_id,
+        advisor_id=advisor_id,
+        cco_email=request.cco_email,
+        notes=request.notes
+    )
     
     if result["status"] == "error":
         raise HTTPException(status_code=400, detail=result["error"])
