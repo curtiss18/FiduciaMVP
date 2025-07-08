@@ -18,7 +18,7 @@ from datetime import datetime
 
 from src.services.compliance_service import compliance_service
 from src.services.token_manager import TokenValidationError
-from src.services.enhanced_warren_service import enhanced_warren_service
+from src.services.warren import enhanced_warren_service
 from src.middleware.compliance_auth import (
     ComplianceAuthContext,
     validate_token_from_path_param,

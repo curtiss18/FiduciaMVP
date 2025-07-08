@@ -5,7 +5,7 @@ import logging
 from src.services.claude_service import claude_service
 from src.services.async_knowledge_service import async_kb_service
 from src.services.warren_database_service import warren_db_service
-from src.services.enhanced_warren_service import enhanced_warren_service
+from src.services.warren import enhanced_warren_service
 from src.services.embedding_service import embedding_service
 from src.services.vector_search_service import vector_search_service
 from src.services.content_vectorization_service import content_vectorization_service
