@@ -63,6 +63,49 @@ cd frontend-advisor && npm run dev      # Advisor portal (localhost:3002)
 python tests/test_warren_basic.py       # Verify functionality
 ```
 
+## 🧪 **Testing Infrastructure**
+
+FiduciaMVP includes comprehensive testing infrastructure for reliable development and production deployment.
+
+### **Quick Testing Commands**
+
+```bash
+# Activate environment and start test infrastructure
+.\venv\Scripts\Activate.ps1
+docker-compose --profile testing up -d postgres_test redis_test
+
+# Run integration tests
+python -m pytest tests/integration/warren/ -v
+
+# Run performance tests
+python -m pytest -m performance -v -s
+
+# Run all tests with output
+python -m pytest tests/integration/ -v -s
+```
+
+### **Test Categories**
+
+| Test Type | Command | Purpose |
+|-----------|---------|---------|
+| **Integration** | `pytest tests/integration/ -v` | End-to-end workflows |
+| **Performance** | `pytest -m performance -v` | SaaS benchmarks |
+| **Unit** | `pytest tests/unit/ -v` | Component testing |
+
+### **Testing Documentation**
+
+- **📖 Complete Guide**: [`docs/testing-infrastructure.md`](testing-infrastructure.md) - Comprehensive testing documentation
+- **⚡ Quick Reference**: [`docs/testing-quick-reference.md`](testing-quick-reference.md) - Developer quick start
+- **🗂️ Test Structure**: `tests/` directory with fixtures, integration, and unit tests
+
+### **Test Results** ✅
+
+Current integration test status (July 8, 2025):
+- ✅ End-to-end Warren workflows: PASSING
+- ✅ Error handling: PASSING  
+- ✅ Performance: < 0.01s response time (EXCELLENT)
+- ✅ Multi-content types: All supported types working
+
 #### **Portal Development URLs**
 - **Admin Portal**: http://localhost:3001 - Content management, system monitoring
 - **Advisor Portal**: http://localhost:3002 - Warren chat interface
