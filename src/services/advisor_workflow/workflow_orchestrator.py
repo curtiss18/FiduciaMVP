@@ -138,10 +138,12 @@ class WorkflowOrchestrator:
     # ===================================================================
     
     async def update_content_status(self, content_id: int, advisor_id: str, new_status: str,
-                                   reviewer: Optional[str] = None, notes: Optional[str] = None,
-                                   user_role: str = "advisor") -> Dict[str, Any]:
+                                   advisor_notes: Optional[str] = None, reviewer: Optional[str] = None, 
+                                   notes: Optional[str] = None, user_role: str = "advisor") -> Dict[str, Any]:
         """Update content status."""
-        context = {'user_role': user_role, 'reviewer': reviewer, 'notes': notes}
+        # Support both advisor_notes (backward compatibility) and notes (new interface)
+        final_notes = advisor_notes or notes
+        context = {'user_role': user_role, 'reviewer': reviewer, 'notes': final_notes}
         return await self.content_status_manager.transition_status(
             content_id=content_id, advisor_id=advisor_id, new_status=new_status, context=context
         )

@@ -46,7 +46,8 @@ class AdvisorTransitionStrategy(StatusTransitionStrategy):
             'draft': ['submitted', 'archived'],
             'approved': ['draft', 'archived'],
             'rejected': ['draft'],
-            'archived': ['draft']
+            'archived': ['draft'],
+            'submitted': ['archived'] 
         }
         
         return new_status in allowed_transitions.get(current_status, [])
@@ -61,7 +62,7 @@ class AdvisorTransitionStrategy(StatusTransitionStrategy):
             'approved': ['draft', 'archived'],
             'rejected': ['draft'],
             'archived': ['draft'],
-            'submitted': []
+            'submitted': ['archived'] 
         }
         
         return transitions.get(current_status, [])
@@ -72,10 +73,6 @@ class AdvisorTransitionStrategy(StatusTransitionStrategy):
         
         if new_status == 'submitted':
             updates['submitted_for_review_at'] = 'NOW()'
-        elif new_status == 'archived':
-            updates['archived_at'] = 'NOW()'
-        elif new_status == 'draft' and context.get('previous_status') == 'archived':
-            updates['archived_at'] = None
             
         return updates
     
@@ -153,23 +150,7 @@ class CCOTransitionStrategy(StatusTransitionStrategy):
         
         if new_status == 'submitted':
             updates['submitted_for_review_at'] = 'NOW()'
-        elif new_status == 'approved':
-            updates['approved_at'] = 'NOW()'
-            updates['reviewed_by'] = context.get('cco_email') or context.get('user_email')
-        elif new_status == 'rejected':
-            updates['rejected_at'] = 'NOW()'
-            updates['reviewed_by'] = context.get('cco_email') or context.get('user_email')
-        elif new_status == 'archived':
-            updates['archived_at'] = 'NOW()'
-        elif new_status == 'draft':
-            # Clear review timestamps when returning to draft
-            if context.get('previous_status') in ['approved', 'rejected']:
-                updates['approved_at'] = None
-                updates['rejected_at'] = None
-                updates['reviewed_by'] = None
-            if context.get('previous_status') == 'archived':
-                updates['archived_at'] = None
-                
+
         return updates
     
     def validate_transition_context(self, context: Dict) -> Dict[str, Any]:

@@ -11,7 +11,7 @@ from fastapi import APIRouter, Query, HTTPException, File, UploadFile, Form
 from typing import Optional, List
 from pydantic import BaseModel
 
-from src.services.advisor_workflow_service import advisor_workflow_service
+from src.services.advisor_workflow import advisor_workflow_service
 from src.services.document_manager import DocumentManager
 from src.services.document_processor import DocumentProcessor
 from src.models.advisor_workflow_models import ContentStatus
