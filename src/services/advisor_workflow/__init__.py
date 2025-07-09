@@ -7,7 +7,8 @@ Services:
 - ContentLibraryService: Advisor content library CRUD
 - ComplianceWorkflowService: Review workflow and approval
 - ContentStatusManager: Status transitions and business rules
-- NotificationCoordinator: Email notifications ✅ NEW
+- NotificationCoordinator: Email notifications
+- ContentUpdateService: Content editing and modification ✅ NEW
 - WorkflowOrchestrator: Main coordinator (future)
 """
 
@@ -16,11 +17,13 @@ from .content_library_service import ContentLibraryService
 from .compliance_workflow_service import ComplianceWorkflowService
 from .content_status_manager import ContentStatusManager
 from .notification_coordinator import NotificationCoordinator
+from .content_update_service import ContentUpdateService
 
 __all__ = [
     'ConversationManagerService',
     'ContentLibraryService', 
     'ComplianceWorkflowService',
     'ContentStatusManager',
-    'NotificationCoordinator'
+    'NotificationCoordinator',
+    'ContentUpdateService'
 ]
