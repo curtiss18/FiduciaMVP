@@ -5,7 +5,7 @@ Compliance review workflow service following Warren pattern.
 Responsibilities:
 - Submit advisor content for CCO compliance review
 - Generate secure review tokens with expiration
-- Coordinate with email service for review notifications
+- Coordinate with NotificationCoordinator for review notifications
 - Track review status and submission timestamps
 - Handle content status transitions for compliance workflow
 - Maintain audit trail for regulatory compliance
@@ -27,8 +27,14 @@ logger = logging.getLogger(__name__)
 class ComplianceWorkflowService:
     """Compliance review workflow management following Warren pattern."""
     
-    def __init__(self):
-        """Initialize with no dependencies (Warren pattern)."""
+    def __init__(self, notification_coordinator=None):
+        """Initialize with dependency injection for testing (Warren pattern)."""
+        # Import NotificationCoordinator with lazy loading for circular import prevention
+        if notification_coordinator is None:
+            from .notification_coordinator import NotificationCoordinator
+            self.notification_coordinator = NotificationCoordinator()
+        else:
+            self.notification_coordinator = notification_coordinator
         pass
     
     async def submit_for_review(
@@ -75,8 +81,8 @@ class ComplianceWorkflowService:
                 
                 await db.commit()
                 
-                # Send email notification to CCO
-                email_sent = await self._send_review_notification(
+                # Send email notification to CCO using NotificationCoordinator
+                email_sent = await self.notification_coordinator.send_review_notification(
                     cco_email=cco_email,
                     content=content,
                     review_token=review_token,
@@ -261,41 +267,3 @@ class ComplianceWorkflowService:
                 "valid": False,
                 "error": "Token validation failed"
             }
-    
-    async def _send_review_notification(
-        self,
-        cco_email: str,
-        content: AdvisorContent,
-        review_token: str,
-        notes: Optional[str] = None
-    ) -> bool:
-        """Send email notification to CCO about content review request."""
-        try:
-            # Import email service (Warren pattern - direct service calls)
-            from src.services.email_service import email_service
-            
-            # Create review URL
-            review_url = f"http://localhost:3003/review/{review_token}"
-            
-            # Send email using our email service
-            success = await email_service.send_review_notification(
-                to_email=cco_email,
-                content_title=content.title,
-                content_type=content.content_type,
-                advisor_id=content.advisor_id,
-                review_url=review_url,
-                notes=notes
-            )
-            
-            if success:
-                logger.info(f"Review notification email sent successfully to {cco_email}")
-                logger.info(f"Content: {content.title}")
-                logger.info(f"Review URL: {review_url}")
-            else:
-                logger.error(f"Failed to send review notification email to {cco_email}")
-            
-            return success
-            
-        except Exception as e:
-            logger.error(f"Exception in _send_review_notification: {e}")
-            return False
