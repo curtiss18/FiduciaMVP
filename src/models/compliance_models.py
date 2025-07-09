@@ -14,6 +14,7 @@ import enum
 
 # Import shared Base from main database models
 from src.models.database import Base
+# Note: AdvisorContent will be referenced as string to avoid circular imports
 
 # Enums for compliance workflow
 class SubscriptionType(enum.Enum):
@@ -129,8 +130,8 @@ class ContentReview(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
-    # Relationships
-    content = relationship("AdvisorContent", backref=backref("reviews", cascade="all, delete-orphan"))
+    # Relationships - use lazy loading to avoid circular imports
+    content = relationship("AdvisorContent", lazy="select", backref=backref("reviews", cascade="all, delete-orphan", lazy="select"))
     cco = relationship("ComplianceCCO", backref="reviews")
     
     # Constraints

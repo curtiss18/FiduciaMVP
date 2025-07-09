@@ -56,7 +56,9 @@ class ContentGenerationOrchestrator:
         current_content: Optional[str] = None,
         is_refinement: bool = False,
         youtube_context: Optional[Dict[str, Any]] = None,
-        use_conversation_context: bool = True
+        use_conversation_context: bool = True,
+        conversation_history: Optional[list] = None,
+        session_documents: Optional[list] = None
     ) -> Dict[str, Any]:
         """Generate content maintaining exact interface compatibility with enhanced_warren_service."""
         try:
@@ -71,12 +73,22 @@ class ContentGenerationOrchestrator:
             
             content_type_enum = validation_result.processed_params.get("content_type_enum")
             
-            # Get session context (conversation + documents)
-            session_context = await self.conversation_service.get_session_context(
-                session_id, use_conversation_context
-            )
-            conversation_context = session_context.get("conversation_context", "")
-            session_documents = session_context.get("session_documents", [])
+            # Get session context (conversation + documents) - use provided params if available
+            if conversation_history is not None or session_documents is not None:
+                # Use provided parameters directly
+                conversation_context = ""
+                if conversation_history:
+                    # Convert conversation history to string format
+                    conversation_context = "\n".join([f"{msg.get('role', 'user')}: {msg.get('content', '')}" 
+                                                     for msg in conversation_history])
+                session_docs = session_documents or []
+            else:
+                # Use existing session context service
+                session_context = await self.conversation_service.get_session_context(
+                    session_id, use_conversation_context
+                )
+                conversation_context = session_context.get("conversation_context", "")
+                session_docs = session_context.get("session_documents", [])
             
             # Execute search with fallback logic
             context_data = await self.search_orchestrator.execute_search_with_fallback(
@@ -85,7 +97,7 @@ class ContentGenerationOrchestrator:
             
             # Add session context to search results
             context_data["conversation_context"] = conversation_context
-            context_data["session_documents"] = session_documents
+            context_data["session_documents"] = session_docs
             context_data["session_id"] = session_id
             
             # Assess context quality for strategy selection
@@ -145,9 +157,17 @@ class ContentGenerationOrchestrator:
         # Convert string content type to enum if possible
         content_type_enum = None
         try:
-            content_type_enum = ContentType(content_type.upper())
+            # Handle common aliases for content types
+            content_type_normalized = content_type.upper()
+            if content_type_normalized == "BLOG_POST":
+                content_type_normalized = "WEBSITE_BLOG"
+            elif content_type_normalized == "TWITTER_POST":
+                content_type_normalized = "X_POST"
+            
+            content_type_enum = ContentType(content_type_normalized)
         except ValueError:
             logger.warning(f"Unknown content type: {content_type}")
+            # Don't fail - let it continue with None content_type_enum
         
         result.processed_params = {
             "content_type_enum": content_type_enum,
@@ -160,9 +180,35 @@ class ContentGenerationOrchestrator:
     def _assemble_response(self, content: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """Assemble final response in the expected format for backward compatibility."""
         context_data = metadata.get("context_data", {})
-        session_documents = metadata.get("session_documents", [])
-        conversation_context = metadata.get("conversation_context", "")
+        session_documents = metadata.get("session_documents", []) or []  # Ensure it's a list
+        conversation_context = metadata.get("conversation_context", "") or ""  # Ensure it's a string
         context_quality = metadata.get("context_quality", {})
+        
+        # Ensure all list fields have default empty lists to prevent None errors
+        marketing_examples = context_data.get("marketing_examples", []) or []
+        disclaimers = context_data.get("disclaimers", []) or []
+        
+        context_used = {
+            "marketing_examples": marketing_examples,
+            "compliance_rules": disclaimers,
+            "conversation_context": conversation_context,
+            "session_documents": session_documents,
+            "search_strategy": context_data.get("search_strategy", "hybrid")
+        }
+        
+        detailed_metadata = {
+            "context_quality": context_quality,
+            "search_details": {
+                "vector_results_found": context_data.get("vector_results_count", 0),
+                "text_results_found": context_data.get("text_results_count", 0),
+                "total_knowledge_sources": context_data.get("total_sources", 0)
+            },
+            "session_info": {
+                "session_id": metadata.get("session_id"),
+                "conversation_context_used": bool(conversation_context),
+                "session_documents_available": bool(session_documents)
+            }
+        }
         
         return {
             "status": "success",
@@ -172,8 +218,8 @@ class ContentGenerationOrchestrator:
             "vector_results_found": context_data.get("vector_results_count", 0),
             "text_results_found": context_data.get("text_results_count", 0),
             "total_knowledge_sources": context_data.get("total_sources", 0),
-            "marketing_examples_count": len(context_data.get("marketing_examples", [])),
-            "compliance_rules_count": len(context_data.get("disclaimers", [])),
+            "marketing_examples_count": len(marketing_examples),
+            "compliance_rules_count": len(disclaimers),
             "session_documents_count": len(session_documents),
             "session_documents_used": [doc.get('title', 'Unknown') for doc in session_documents],
             "fallback_used": context_data.get("fallback_used", False),
@@ -182,7 +228,10 @@ class ContentGenerationOrchestrator:
             "user_request": metadata.get("user_request"),
             "conversation_context_used": bool(conversation_context),
             "session_documents_available": bool(session_documents),
-            "session_id": metadata.get("session_id")
+            "session_id": metadata.get("session_id"),
+            "generated_content": content,
+            "context_used": context_used,
+            "metadata": detailed_metadata
         }
     
     async def _coordinate_generation_workflow(self, request_params: Dict[str, Any]) -> Dict[str, Any]:

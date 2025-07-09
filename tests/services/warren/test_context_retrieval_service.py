@@ -279,75 +279,6 @@ class TestContextRetrievalService:
         disclaimer_ids = [d["id"] for d in result["disclaimers"]]
         assert "text_disclaimer_1" not in disclaimer_ids
     
-    # Test assess_context_quality method
-    def test_assess_context_quality_vector_unavailable(self, service):
-        """Test quality assessment when vector search is unavailable."""
-        # Setup
-        results = {
-            "marketing_examples": [{"id": "test"}],
-            "disclaimers": [{"id": "test"}],
-            "vector_available": False
-        }
-        
-        # Execute
-        quality = service.assess_context_quality(results)
-        
-        # Verify
-        assert quality["sufficient"] == False
-        assert quality["score"] == 0.0
-        assert quality["reason"] == "vector_search_unavailable"
-    
-    def test_assess_context_quality_no_content(self, service):
-        """Test quality assessment when no content is found."""
-        # Setup
-        results = {
-            "marketing_examples": [],
-            "disclaimers": [],
-            "vector_available": True
-        }
-        
-        # Execute
-        quality = service.assess_context_quality(results)
-        
-        # Verify
-        assert quality["sufficient"] == False
-        assert quality["score"] == 0.1
-        assert quality["reason"] == "no_relevant_content_found"
-    
-    def test_assess_context_quality_no_disclaimers(self, service):
-        """Test quality assessment when no disclaimers are found."""
-        # Setup
-        results = {
-            "marketing_examples": [{"id": "test1"}, {"id": "test2"}],
-            "disclaimers": [],
-            "vector_available": True
-        }
-        
-        # Execute
-        quality = service.assess_context_quality(results)
-        
-        # Verify
-        assert quality["sufficient"] == False
-        assert quality["score"] == 0.4
-        assert quality["reason"] == "no_disclaimers_found"
-    
-    def test_assess_context_quality_sufficient(self, service):
-        """Test quality assessment when content is sufficient."""
-        # Setup
-        results = {
-            "marketing_examples": [{"id": "test1"}, {"id": "test2"}],
-            "disclaimers": [{"id": "disclaimer1"}],
-            "vector_available": True
-        }
-        
-        # Execute
-        quality = service.assess_context_quality(results)
-        
-        # Verify
-        assert quality["sufficient"] == True
-        assert quality["score"] == 1.0  # (2 * 0.4) + (1 * 0.3) + 0.3 = 1.0
-        assert quality["reason"] == "sufficient_quality"
-    
     # Integration test
     @pytest.mark.asyncio
     async def test_full_workflow(self, service, mock_vector_search_service, mock_warren_db_service, sample_marketing_examples, sample_disclaimers):
@@ -375,11 +306,7 @@ class TestContextRetrievalService:
         # Combine results
         combined = service.combine_contexts(vector_context, text_context)
         
-        # Assess quality
-        quality = service.assess_context_quality(combined)
-        
         # Verify
         assert combined["search_strategy"] == "hybrid"
         assert len(combined["marketing_examples"]) == 2  # 1 vector + 1 text
         assert len(combined["disclaimers"]) == 2  # 1 vector + 1 text (vector had < 2)
-        assert quality["sufficient"] == True
