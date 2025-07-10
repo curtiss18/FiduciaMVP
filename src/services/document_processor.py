@@ -1,6 +1,5 @@
 # Enhanced Multi-Modal Document Processor Service
 """
-SCRUM-40: Enhanced Multi-Modal Document Processing and Text Extraction
 
 Service for comprehensive document processing with full multi-modal support:
 1. Extract text from PDF, DOCX, and TXT files
@@ -10,8 +9,6 @@ Service for comprehensive document processing with full multi-modal support:
 5. Create Warren-optimized context summaries
 6. Validate file types and security
 
-Created: July 3, 2025
-Status: Phase 1 - Core Structure Implementation
 """
 
 import logging
@@ -52,7 +49,6 @@ class DocumentProcessor:
     """
     
     def __init__(self):
-        """Initialize the document processor with multi-modal capabilities."""
         self.supported_types = ['pdf', 'docx', 'txt']
         self.max_file_size = 50 * 1024 * 1024  # 50MB limit
         self.image_description_prompt = """
@@ -61,40 +57,12 @@ class DocumentProcessor:
         """
         
         if not DEPENDENCIES_AVAILABLE:
-            logger.warning("Document processing dependencies not installed - running in limited mode")
-            # Don't raise error, just log warning and continue with limited functionality
-            self.limited_mode = True
-        else:
-            self.limited_mode = False
+            logger.error("Document processing dependencies not installed")
+            raise ImportError("Required dependencies for document processing not available")
     
     # ===== CORE PROCESSING METHODS =====
     
     async def process_uploaded_file(self, file_content: bytes, filename: str, content_type: str) -> Dict[str, Any]:
-        """
-        Main entry point for processing any uploaded file.
-        
-        Args:
-            file_content: Raw file bytes
-            filename: Original filename
-            content_type: File type ('pdf', 'docx', 'txt')
-            
-        Returns:
-            Dict with comprehensive multi-modal extraction results
-        """
-        # Check if we're in limited mode
-        if self.limited_mode:
-            logger.warning(f"Processing {filename} in limited mode - full dependencies not available")
-            return {
-                "success": False,
-                "error": "Document processing dependencies not installed. Please install PyMuPDF, python-docx, Pillow, and other required packages.",
-                "extracted_text": "",
-                "metadata": {
-                    "filename": filename,
-                    "content_type": content_type,
-                    "processing_mode": "limited"
-                }
-            }
-        
         try:
             logger.info(f"Processing {content_type} file: {filename}")
             
@@ -128,12 +96,6 @@ class DocumentProcessor:
             raise
     
     async def extract_content_from_pdf(self, file_content: bytes) -> Dict[str, Any]:
-        """
-        Extract comprehensive content from PDF with multi-modal analysis.
-        
-        Returns:
-            Dict containing text, images, tables, and visual summaries
-        """
         logger.info("Starting PDF multi-modal extraction")
         start_time = datetime.utcnow()
         
@@ -210,12 +172,6 @@ class DocumentProcessor:
             return result
     
     async def extract_content_from_docx(self, file_content: bytes) -> Dict[str, Any]:
-        """
-        Extract comprehensive content from DOCX with embedded content analysis.
-        
-        Returns:
-            Dict containing text, images, tables, and visual summaries
-        """
         logger.info("Starting DOCX multi-modal extraction")
         start_time = datetime.utcnow()
         
@@ -291,12 +247,6 @@ class DocumentProcessor:
             return result
     
     async def process_text_file(self, file_content: bytes) -> Dict[str, Any]:
-        """
-        Process text file with enhanced metadata extraction.
-        
-        Returns:
-            Dict containing text and enhanced metadata
-        """
         logger.info("Starting TXT file processing with enhanced metadata")
         start_time = datetime.utcnow()
         
@@ -364,7 +314,6 @@ class DocumentProcessor:
     # ===== VISUAL ELEMENT PROCESSING METHODS =====
     
     async def _extract_images_from_pdf_page(self, page, page_num: int) -> List[Dict[str, Any]]:
-        """Extract and analyze images from a PDF page."""
         images = []
         
         try:
@@ -415,7 +364,6 @@ class DocumentProcessor:
         return images
     
     async def _extract_tables_from_pdf_page(self, page, page_num: int) -> List[Dict[str, Any]]:
-        """Extract and structure tables from a PDF page."""
         tables = []
         
         try:
@@ -451,7 +399,6 @@ class DocumentProcessor:
         return tables
     
     async def _extract_docx_table(self, table, table_idx: int) -> Optional[Dict[str, Any]]:
-        """Extract table data from DOCX document."""
         try:
             table_data = []
             
@@ -479,7 +426,6 @@ class DocumentProcessor:
         return None
     
     async def _extract_docx_images(self, document) -> List[Dict[str, Any]]:
-        """Extract embedded images from DOCX document."""
         images = []
         
         try:
@@ -514,7 +460,6 @@ class DocumentProcessor:
         return images
     
     async def _detect_text_tables(self, text_content: str) -> List[Dict[str, Any]]:
-        """Detect table-like structures in plain text."""
         tables = []
         lines = text_content.split('\n')
         
@@ -567,7 +512,6 @@ class DocumentProcessor:
     # ===== ANALYSIS AND DESCRIPTION METHODS =====
     
     def _classify_image_type(self, image: "Image.Image") -> str:
-        """Classify image type based on visual characteristics."""
         # Simple heuristic-based classification
         # In production, this could use ML models
         
@@ -586,7 +530,6 @@ class DocumentProcessor:
             return "icon"  # Small image, likely an icon
     
     async def _generate_image_description(self, image: "Image.Image") -> str:
-        """Generate AI-powered description of the image."""
         # For now, return a placeholder description
         # In production, this would use Claude Vision API or similar
         
@@ -605,7 +548,6 @@ class DocumentProcessor:
         return descriptions.get(image_type, f"Visual element ({width}x{height}px) - content analysis needed")
     
     async def _generate_table_description(self, table_data: List[List[str]]) -> str:
-        """Generate description of table content and purpose."""
         if not table_data or len(table_data) < 2:
             return "Empty or invalid table"
         
@@ -627,7 +569,6 @@ class DocumentProcessor:
         return f"{purpose.title()} with {rows} rows and {cols} columns - headers: {', '.join(headers[:3])}{'...' if len(headers) > 3 else ''}"
     
     async def _extract_chart_data(self, image: "Image.Image") -> Optional[str]:
-        """Extract data from charts/graphs (placeholder for future ML implementation)."""
         # Placeholder for future OCR/ML-based chart data extraction
         # This would use specialized libraries like plotdigitizer or ML models
         
@@ -636,7 +577,6 @@ class DocumentProcessor:
     # ===== SUMMARY GENERATION METHODS =====
     
     async def _create_visual_summary(self, images: List[Dict], tables: List[Dict]) -> str:
-        """Create human-readable summary of visual elements."""
         if not images and not tables:
             return "No visual elements detected"
         
@@ -659,7 +599,6 @@ class DocumentProcessor:
         return "Document contains " + " and ".join(summary_parts)
     
     async def _create_warren_context_summary(self, extracted_data: Dict) -> str:
-        """Create Warren-optimized context summary including visual awareness."""
         context_parts = []
         
         # Text summary
@@ -735,16 +674,6 @@ class DocumentProcessor:
         return tab_count >= 2 or pipe_count >= 2 or space_groups >= 2
     
     def validate_file_type(self, filename: str, content: bytes) -> bool:
-        """
-        Validate file type and perform security checks.
-        
-        Args:
-            filename: Original filename
-            content: File content bytes
-            
-        Returns:
-            bool: True if file is valid and safe
-        """
         try:
             # Check file size
             if len(content) > self.max_file_size:

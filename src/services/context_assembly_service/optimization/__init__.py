@@ -1,14 +1,26 @@
 """
-Optimization Services Package
+Context Optimization Package
 
-Services for token management and context compression.
+Token management and compression services for context optimization.
+Extracted from ContextAssembler for improved performance and separation of concerns.
 """
 
-# TODO: Implement in SCRUM-110 and advanced phases
-# from .text_token_manager import TextTokenManager
-# from .context_optimizer import ContextOptimizer
+from .text_token_manager import TextTokenManager
+from .basic_context_optimizer import BasicContextOptimizer
+from .compression import (
+    BaseCompressionStrategy,
+    StructurePreservingCompressor,
+    ConversationCompressor,
+    GenericCompressor,
+    CompressionStrategyFactory
+)
 
 __all__ = [
-    # 'TextTokenManager',
-    # 'ContextOptimizer'
+    'TextTokenManager',
+    'BasicContextOptimizer',
+    'BaseCompressionStrategy',
+    'StructurePreservingCompressor',
+    'ConversationCompressor',
+    'GenericCompressor',
+    'CompressionStrategyFactory'
 ]

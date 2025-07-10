@@ -1,11 +1,6 @@
 """
 Context Assembler for Intelligent Token Management
 
-Implements sophisticated token allocation strategies and dynamic context assembly
-for Warren's conversation system. Handles Claude's 200K token limits with
-intelligent context prioritization and optimization.
-
-Based on SCRUM-34 requirements for enhanced token management and context assembly.
 """
 
 import asyncio
@@ -20,6 +15,8 @@ from enum import Enum
 
 from src.models.advisor_workflow_models import AdvisorMessages
 from src.services.conversation_manager import ConversationManager
+from src.services.context_assembly_service.optimization.text_token_manager import TextTokenManager
+from src.services.context_assembly_service.optimization.compression.compression_strategy_factory import CompressionStrategyFactory
 
 logger = logging.getLogger(__name__)
 
@@ -42,15 +39,6 @@ class ContextType(Enum):
     USER_INPUT = "user_input"
 
 class ContextAssembler:
-    """
-    Intelligent context assembly with dynamic token allocation strategies.
-    
-    Features:
-    - Request-type-aware token budgeting
-    - Priority-based context selection
-    - Intelligent context compression
-    - Graceful degradation strategies
-    """
     
     # Token allocation strategies based on request type
     CONTEXT_BUDGETS = {
@@ -107,7 +95,8 @@ class ContextAssembler:
     
     def __init__(self, db_session: AsyncSession):
         self.db = db_session
-        self.token_manager = TokenManager()
+        self.token_manager = TextTokenManager()
+        self.compression_factory = CompressionStrategyFactory(self.token_manager)
         self.conversation_manager = ConversationManager(db_session)
         
         # Claude's limits
@@ -175,11 +164,6 @@ class ContextAssembler:
             return await self._build_fallback_context(user_input, context_data)
     
     async def allocate_token_budget(self, request_type: RequestType, user_input: str) -> Dict[ContextType, int]:
-        """
-        Allocate token budget based on request type and characteristics.
-        
-        Returns optimized budget allocation for different context types.
-        """
         base_budget = self.CONTEXT_BUDGETS.get(request_type, self.CONTEXT_BUDGETS[RequestType.CREATION]).copy()
         
         # Dynamic adjustments based on request characteristics
@@ -221,11 +205,6 @@ class ContextAssembler:
         budget: Dict[ContextType, int],
         request_type: RequestType
     ) -> Dict[ContextType, str]:
-        """
-        Prioritize and optimize context elements within token budget.
-        
-        Uses intelligent compression and selection based on priority and available budget.
-        """
         optimized_context = {}
         total_used_tokens = 0
         
@@ -254,7 +233,7 @@ class ContextAssembler:
                 
             else:
                 # Need to compress content
-                compressed_content = await self.token_manager.compress_content(
+                compressed_content = await self._compress_content(
                     content, allocated_budget, context_type
                 )
                 optimized_context[context_type] = compressed_content
@@ -274,9 +253,6 @@ class ContextAssembler:
         return optimized_context
     
     def _determine_request_type(self, user_input: str, current_content: Optional[str]) -> RequestType:
-        """
-        Analyze user input to determine the type of request for optimal token allocation.
-        """
         user_input_lower = user_input.lower()
         
         # Check for refinement indicators
@@ -308,9 +284,6 @@ class ContextAssembler:
         current_content: Optional[str],
         youtube_context: Optional[Dict]
     ) -> Dict[ContextType, str]:
-        """
-        Gather all available context elements for optimization.
-        """
         elements = {}
         
         # User input (always include)
@@ -348,7 +321,6 @@ class ContextAssembler:
         return elements
     
     def _extract_compliance_sources(self, context_data: Dict) -> str:
-        """Extract and format compliance sources from context data."""
         compliance_parts = []
         
         # Rules
@@ -368,7 +340,6 @@ class ContextAssembler:
         return "\n".join(compliance_parts)
     
     def _extract_vector_search_results(self, context_data: Dict) -> str:
-        """Extract and format vector search results from context data."""
         results_parts = []
         
         examples = context_data.get("examples", [])
@@ -384,7 +355,6 @@ class ContextAssembler:
         return "\n".join(results_parts)
     
     def _format_youtube_context(self, youtube_context: Dict) -> str:
-        """Format YouTube context for inclusion in prompt."""
         context_parts = []
         context_parts.append("## VIDEO CONTEXT:")
         
@@ -400,7 +370,6 @@ class ContextAssembler:
         return "\n".join(context_parts)
     
     def _build_final_context_string(self, optimized_context: Dict[ContextType, str]) -> str:
-        """Build the final context string from optimized context elements."""
         context_parts = []
         
         # Add context elements in logical order
@@ -454,7 +423,7 @@ class ContextAssembler:
             target_reduction = min(original_tokens * 0.3, reduction_needed - tokens_saved)
             new_target = max(500, original_tokens - target_reduction)  # Minimum 500 tokens
             
-            compressed_content = await self.token_manager.compress_content(
+            compressed_content = await self._compress_content(
                 original_content, new_target, context_type
             )
             
@@ -465,7 +434,6 @@ class ContextAssembler:
         return compressed_context
     
     async def _build_fallback_context(self, user_input: str, context_data: Optional[Dict]) -> Dict:
-        """Build basic fallback context when optimization fails."""
         basic_context = f"USER REQUEST: {user_input}"
         
         if context_data:
@@ -482,183 +450,41 @@ class ContextAssembler:
             "optimization_applied": False
         }
 
-
-class TokenManager:
-    """
-    Precise token counting and content compression for Claude AI.
-    
-    Uses tiktoken for accurate token counting and intelligent compression strategies.
-    """
-    
-    def __init__(self):
-        # Use Claude's tokenizer (approximating with GPT-4 tokenizer)
-        try:
-            self.tokenizer = tiktoken.encoding_for_model("gpt-4")
-        except Exception:
-            # Fallback to rough estimation
-            self.tokenizer = None
-            logger.warning("Could not load tiktoken, using approximation")
-    
-    def count_tokens(self, text: str) -> int:
-        """
-        Count tokens accurately using tiktoken.
-        """
-        if not text:
-            return 0
-            
-        if self.tokenizer:
-            try:
-                return len(self.tokenizer.encode(text))
-            except Exception:
-                pass
-        
-        # Fallback: rough approximation (1 token ≈ 4 characters)
-        return len(text) // 4
-    
-    async def compress_content(
+    async def _compress_content(
         self, 
         content: str, 
         target_tokens: int, 
         context_type: ContextType
     ) -> str:
-        """
-        Compress content to fit within target token count while preserving key information.
-        """
+
         if not content:
             return content
             
-        current_tokens = self.count_tokens(content)
+        current_tokens = self.token_manager.count_tokens(content)
         if current_tokens <= target_tokens:
             return content
         
-        # Choose compression strategy based on context type
-        if context_type == ContextType.CONVERSATION_HISTORY:
-            return self._compress_conversation(content, target_tokens)
-        elif context_type == ContextType.YOUTUBE_CONTEXT:
-            return self._compress_youtube_context(content, target_tokens)
-        elif context_type == ContextType.VECTOR_SEARCH_RESULTS:
-            return self._compress_search_results(content, target_tokens)
-        else:
-            return self._compress_generic(content, target_tokens)
+        # Get appropriate compression strategy
+        strategy = self.compression_factory.get_best_strategy_for_content(content, context_type)
+        
+        try:
+            compressed_content = await strategy.compress_content(content, target_tokens, context_type)
+            return compressed_content
+        except Exception as e:
+            logger.error(f"Compression failed for {context_type}: {e}")
+            # Fallback to simple truncation
+            return self._simple_truncate(content, target_tokens)
     
-    def _compress_conversation(self, content: str, target_tokens: int) -> str:
-        """Compress conversation history by keeping recent exchanges."""
-        lines = content.split('\n')
-        
-        # Keep most recent exchanges
-        compressed_lines = []
-        current_tokens = 0
-        
-        for line in reversed(lines):
-            line_tokens = self.count_tokens(line)
-            if current_tokens + line_tokens <= target_tokens:
-                compressed_lines.insert(0, line)
-                current_tokens += line_tokens
-            else:
-                break
-        
-        if len(compressed_lines) < len(lines):
-            compressed_lines.insert(0, "[Earlier conversation truncated]")
-        
-        return '\n'.join(compressed_lines)
-    
-    def _compress_youtube_context(self, content: str, target_tokens: int) -> str:
-        """Compress YouTube context by truncating transcript."""
-        lines = content.split('\n')
-        header_lines = []
-        transcript_lines = []
-        
-        in_transcript = False
-        for line in lines:
-            if "**VIDEO TRANSCRIPT:**" in line:
-                in_transcript = True
-                header_lines.append(line)
-            elif not in_transcript:
-                header_lines.append(line)
-            else:
-                transcript_lines.append(line)
-        
-        # Calculate available tokens for transcript
-        header_tokens = self.count_tokens('\n'.join(header_lines))
-        available_transcript_tokens = target_tokens - header_tokens - 50  # Buffer
-        
-        if available_transcript_tokens <= 0:
-            return '\n'.join(header_lines) + "\n[Transcript too long to include]"
-        
-        # Truncate transcript to fit
-        transcript_text = '\n'.join(transcript_lines)
-        if self.count_tokens(transcript_text) <= available_transcript_tokens:
-            return content
-        
-        # Keep beginning of transcript
-        compressed_transcript = self._truncate_to_token_limit(transcript_text, available_transcript_tokens)
-        
-        return '\n'.join(header_lines) + '\n' + compressed_transcript + "\n[Transcript truncated for length]"
-    
-    def _compress_search_results(self, content: str, target_tokens: int) -> str:
-        """Compress search results by limiting examples."""
-        lines = content.split('\n')
-        compressed_lines = []
-        current_tokens = 0
-        
-        for line in lines:
-            line_tokens = self.count_tokens(line)
-            if current_tokens + line_tokens <= target_tokens:
-                compressed_lines.append(line)
-                current_tokens += line_tokens
-            else:
-                if not compressed_lines or "Examples truncated" not in compressed_lines[-1]:
-                    compressed_lines.append("[Additional examples truncated for space]")
-                break
-        
-        return '\n'.join(compressed_lines)
-    
-    def _compress_generic(self, content: str, target_tokens: int) -> str:
-        """Generic compression by truncating while preserving structure."""
-        return self._truncate_to_token_limit(content, target_tokens)
-    
-    def _truncate_to_token_limit(self, text: str, token_limit: int) -> str:
-        """Truncate text to approximate token limit."""
-        if self.count_tokens(text) <= token_limit:
+    def _simple_truncate(self, text: str, token_limit: int) -> str:
+        if self.token_manager.count_tokens(text) <= token_limit:
             return text
         
-        # Binary search for optimal truncation point
-        left, right = 0, len(text)
-        best_length = 0
+        # Estimate character limit based on token limit
+        estimated_chars = self.token_manager.estimate_chars_from_tokens(token_limit)
         
-        while left <= right:
-            mid = (left + right) // 2
-            truncated = text[:mid]
-            
-            if self.count_tokens(truncated) <= token_limit:
-                best_length = mid
-                left = mid + 1
-            else:
-                right = mid - 1
+        if len(text) <= estimated_chars:
+            return text
         
-        return text[:best_length] + "..."
-    
-    async def optimize_context_for_budget(self, context: Dict, budget: int) -> Dict:
-        """
-        Optimize entire context dictionary to fit within token budget.
-        """
-        optimized = {}
-        total_tokens = 0
-        
-        # Sort by priority and allocate tokens
-        for key, content in context.items():
-            content_tokens = self.count_tokens(content)
-            
-            if total_tokens + content_tokens <= budget:
-                optimized[key] = content
-                total_tokens += content_tokens
-            else:
-                # Try to compress to fit remaining budget
-                remaining_budget = budget - total_tokens
-                if remaining_budget > 100:  # Minimum viable content
-                    compressed = await self.compress_content(content, remaining_budget, key)
-                    optimized[key] = compressed
-                    total_tokens += self.count_tokens(compressed)
-                break
-        
-        return optimized
+        # Truncate with some buffer
+        truncated = text[:int(estimated_chars * 0.9)]
+        return truncated.rstrip() + "\n\n[Content truncated due to length]"

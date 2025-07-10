@@ -1,24 +1,26 @@
 """Budget Allocation Service"""
 
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
 from ..interfaces import BudgetAllocationStrategy
 from ..models import RequestType, ContextType, BudgetConfig, BudgetAllocation
+from ..optimization.text_token_manager import TextTokenManager
 
 logger = logging.getLogger(__name__)
 
 
 class BudgetAllocator(BudgetAllocationStrategy):
     
-    def __init__(self):
-        pass
+    def __init__(self, token_manager: Optional[TextTokenManager] = None):
+        self.token_manager = token_manager or TextTokenManager()
     
     async def allocate_budget(self, request_type: RequestType, user_input: str, available_tokens: int = 200000) -> Dict[ContextType, BudgetAllocation]:
         base_budget = self._get_base_budget(request_type)
         
-        # TODO SCRUM-110: Replace with proper TextTokenManager
-        user_input_tokens = len(user_input) // 4  # Rough token estimation
+        # Use TextTokenManager for accurate token counting
+        user_input_tokens = self.token_manager.count_tokens(user_input)
+        logger.debug(f"User input tokens: {user_input_tokens} (was estimated, now accurate)")
         
         # Adjust for longer user input
         if user_input_tokens > base_budget.get(ContextType.USER_INPUT, 2000):
