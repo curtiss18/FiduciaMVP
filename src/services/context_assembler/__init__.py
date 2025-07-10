@@ -25,8 +25,9 @@ from .interfaces import (
     RequestAnalysisStrategy
 )
 
-# TODO: Import services as they are implemented
-# from .budget import BudgetAllocator, RequestTypeAnalyzer  
+# Import services as they are implemented
+from .budget import BudgetAllocator, RequestTypeAnalyzer
+# TODO: Add as implemented  
 # from .gathering import ConversationGatherer, ComplianceGatherer
 # from .optimization import TextTokenManager, ContextOptimizer
 # from .assembly import ContextBuilder, QualityAssessor
@@ -93,9 +94,11 @@ __all__ = [
     # Temporary backward compatibility
     'TokenManager',  # Will be replaced with TextTokenManager in SCRUM-110
     
+    # Services (implemented)
+    'BudgetAllocator',
+    'RequestTypeAnalyzer',
+    
     # Services (TODO: Add as implemented)
-    # 'BudgetAllocator',
-    # 'RequestTypeAnalyzer',
     # 'ConversationGatherer',
     # 'ComplianceGatherer', 
     # 'TextTokenManager',
