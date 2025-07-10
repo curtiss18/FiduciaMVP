@@ -397,7 +397,7 @@ async def upload_file_with_processing(
                         # Get summary info for response
                         updated_doc = await document_manager.retrieve_full_document(document_id)
                         if updated_doc and updated_doc.get('summary'):
-                            from src.services.context_assembler import TokenManager
+                            from src.services.context_assembly_service import TokenManager
                             token_manager = TokenManager()
                             summary_tokens = token_manager.count_tokens(updated_doc['summary'])
                             summary_info = {

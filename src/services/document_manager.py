@@ -22,7 +22,7 @@ from sqlalchemy.orm import selectinload
 from src.models.advisor_workflow_models import SessionDocuments
 from src.core.database import AsyncSessionLocal
 from src.services.claude_service import claude_service
-from src.services.context_assembler import TokenManager
+from src.services.context_assembly_service import TokenManager
 
 logger = logging.getLogger(__name__)
 

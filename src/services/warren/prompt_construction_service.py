@@ -20,7 +20,7 @@ import logging
 from typing import Dict, Any, List, Optional
 
 from src.services.prompt_service import prompt_service
-from src.services.context_assembler import ContextAssembler
+from src.services.context_assembly_service import ContextAssembler
 from src.services.advanced_context_assembler import AdvancedContextAssembler
 from src.core.database import AsyncSessionLocal
 

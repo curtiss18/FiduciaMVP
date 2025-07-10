@@ -29,8 +29,9 @@ from .interfaces import (
 # Import services as they are implemented
 from .budget import BudgetAllocator, RequestTypeAnalyzer
 from .gathering import ContextGatherer, ConversationGatherer, ComplianceGatherer, DocumentGatherer
+from .optimization import TextTokenManager
 # TODO: Add as implemented  
-# from .optimization import TextTokenManager, ContextOptimizer
+# from .optimization import ContextOptimizer
 # from .assembly import ContextBuilder, QualityAssessor
 # from .orchestrator import ContextAssemblyOrchestrator
 
@@ -50,39 +51,8 @@ except ImportError:
 # This addresses the immediate import issue identified in SCRUM-114
 # Will be replaced with proper TextTokenManager in SCRUM-110
 
-import tiktoken
-import logging
-
-logger = logging.getLogger(__name__)
-
-class TokenManager:
-    """
-    TEMPORARY: Placeholder TokenManager for backward compatibility.
-    
-    This is a simplified version to resolve import errors until SCRUM-110
-    implements the proper TextTokenManager service.
-    """
-    
-    def __init__(self):
-        try:
-            self.tokenizer = tiktoken.encoding_for_model("gpt-4")
-        except Exception:
-            self.tokenizer = None
-            logger.warning("Could not load tiktoken, using approximation")
-    
-    def count_tokens(self, text: str) -> int:
-        """Count tokens using tiktoken."""
-        if not text:
-            return 0
-            
-        if self.tokenizer:
-            try:
-                return len(self.tokenizer.encode(text))
-            except Exception:
-                pass
-        
-        # Fallback: rough approximation (1 token ≈ 4 characters)
-        return len(text) // 4
+# Use the new TextTokenManager as the TokenManager for backward compatibility
+TokenManager = TextTokenManager
 
 __version__ = "1.0.0"
 
@@ -115,9 +85,10 @@ __all__ = [
     'ConversationGatherer',
     'ComplianceGatherer', 
     'DocumentGatherer',
+    'TextTokenManager',
     
     # Services (TODO: Add as implemented)
-    # 'TextTokenManager',
+    # 'ContextOptimizer',
     # 'ContextOptimizer',
     # 'ContextBuilder',
     # 'QualityAssessor',
