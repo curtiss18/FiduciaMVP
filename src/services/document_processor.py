@@ -61,8 +61,11 @@ class DocumentProcessor:
         """
         
         if not DEPENDENCIES_AVAILABLE:
-            logger.error("Document processing dependencies not installed")
-            raise ImportError("Required dependencies for document processing not available")
+            logger.warning("Document processing dependencies not installed - running in limited mode")
+            # Don't raise error, just log warning and continue with limited functionality
+            self.limited_mode = True
+        else:
+            self.limited_mode = False
     
     # ===== CORE PROCESSING METHODS =====
     
@@ -78,6 +81,20 @@ class DocumentProcessor:
         Returns:
             Dict with comprehensive multi-modal extraction results
         """
+        # Check if we're in limited mode
+        if self.limited_mode:
+            logger.warning(f"Processing {filename} in limited mode - full dependencies not available")
+            return {
+                "success": False,
+                "error": "Document processing dependencies not installed. Please install PyMuPDF, python-docx, Pillow, and other required packages.",
+                "extracted_text": "",
+                "metadata": {
+                    "filename": filename,
+                    "content_type": content_type,
+                    "processing_mode": "limited"
+                }
+            }
+        
         try:
             logger.info(f"Processing {content_type} file: {filename}")
             

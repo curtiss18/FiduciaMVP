@@ -6,6 +6,7 @@ Provides token budget allocation, context gathering, optimization, assembly,
 and quality assessment services with dependency injection support.
 """
 
+# Import models from the refactored version (they're identical to original)
 from .models import (
     RequestType,
     ContextType,
@@ -32,6 +33,18 @@ from .gathering import ContextGatherer, ConversationGatherer, ComplianceGatherer
 # from .optimization import TextTokenManager, ContextOptimizer
 # from .assembly import ContextBuilder, QualityAssessor
 # from .orchestrator import ContextAssemblyOrchestrator
+
+# TEMPORARY: Import original ContextAssembler for backward compatibility
+# This allows existing imports to work while we complete the refactoring
+try:
+    from ..context_assembler import ContextAssembler
+except ImportError:
+    # If there's a conflict, we'll handle it gracefully
+    import sys
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning("Could not import original ContextAssembler, may need to update imports")
+    ContextAssembler = None
 
 # TEMPORARY: Create placeholder TokenManager for backward compatibility
 # This addresses the immediate import issue identified in SCRUM-114
@@ -92,6 +105,7 @@ __all__ = [
     'RequestAnalysisStrategy',
     
     # Temporary backward compatibility
+    'ContextAssembler',  # Original class for backward compatibility
     'TokenManager',  # Will be replaced with TextTokenManager in SCRUM-110
     
     # Services (implemented)
