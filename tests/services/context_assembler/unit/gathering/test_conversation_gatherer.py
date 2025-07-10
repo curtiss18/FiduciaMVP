@@ -4,8 +4,8 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services.context_assembler.gathering.conversation_gatherer import ConversationGatherer
-from src.services.context_assembler.models import ContextType
+from src.services.context_assembly_service.gathering.conversation_gatherer import ConversationGatherer
+from src.services.context_assembly_service.models import ContextType
 
 
 @pytest.mark.asyncio
@@ -14,7 +14,7 @@ async def test_conversation_gatherer_success():
     gatherer = ConversationGatherer()
     mock_session = AsyncMock(spec=AsyncSession)
     
-    with patch('src.services.context_assembler.gathering.conversation_gatherer.ConversationManager') as mock_cm:
+    with patch('src.services.context_assembly_service.gathering.conversation_gatherer.ConversationManager') as mock_cm:
         mock_manager = AsyncMock()
         mock_cm.return_value = mock_manager
         mock_manager.get_conversation_context.return_value = "Previous conversation content"
@@ -33,7 +33,7 @@ async def test_conversation_gatherer_no_context():
     gatherer = ConversationGatherer()
     mock_session = AsyncMock(spec=AsyncSession)
     
-    with patch('src.services.context_assembler.gathering.conversation_gatherer.ConversationManager') as mock_cm:
+    with patch('src.services.context_assembly_service.gathering.conversation_gatherer.ConversationManager') as mock_cm:
         mock_manager = AsyncMock()
         mock_cm.return_value = mock_manager
         mock_manager.get_conversation_context.return_value = None
@@ -49,7 +49,7 @@ async def test_conversation_gatherer_error_handling():
     gatherer = ConversationGatherer()
     mock_session = AsyncMock(spec=AsyncSession)
     
-    with patch('src.services.context_assembler.gathering.conversation_gatherer.ConversationManager') as mock_cm:
+    with patch('src.services.context_assembly_service.gathering.conversation_gatherer.ConversationManager') as mock_cm:
         mock_manager = AsyncMock()
         mock_cm.return_value = mock_manager
         mock_manager.get_conversation_context.side_effect = Exception("Database error")

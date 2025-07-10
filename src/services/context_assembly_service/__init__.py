@@ -36,22 +36,6 @@ from .orchestrator import BasicContextAssemblyOrchestrator
 # from .optimization import ContextOptimizer
 # from .assembly import QualityAssessor
 
-# TEMPORARY: Import original ContextAssembler for backward compatibility
-# This allows existing imports to work while we complete the refactoring
-try:
-    from ..context_assembler import ContextAssembler
-except ImportError:
-    # If there's a conflict, we'll handle it gracefully
-    import sys
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.warning("Could not import original ContextAssembler, may need to update imports")
-    ContextAssembler = None
-
-# TEMPORARY: Create placeholder TokenManager for backward compatibility
-# This addresses the immediate import issue identified in SCRUM-114
-# Will be replaced with proper TextTokenManager in SCRUM-110
-
 # Use the new TextTokenManager as the TokenManager for backward compatibility
 TokenManager = TextTokenManager
 
@@ -75,9 +59,8 @@ __all__ = [
     'ContextAssemblyStrategy',
     'RequestAnalysisStrategy',
     
-    # Temporary backward compatibility
-    'ContextAssembler',  # Original class for backward compatibility
-    'TokenManager',  # Will be replaced with TextTokenManager in SCRUM-110
+    # Backward compatibility
+    'TokenManager',  # TextTokenManager alias for backward compatibility
     
     # Services (implemented)
     'BudgetAllocator',

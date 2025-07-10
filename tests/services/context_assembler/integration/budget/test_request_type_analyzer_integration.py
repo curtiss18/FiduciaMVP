@@ -1,7 +1,7 @@
 """Integration test for RequestTypeAnalyzer."""
 
 import pytest
-from src.services.context_assembler import RequestTypeAnalyzer, RequestType
+from src.services.context_assembly_service import RequestTypeAnalyzer, RequestType
 
 
 @pytest.mark.asyncio

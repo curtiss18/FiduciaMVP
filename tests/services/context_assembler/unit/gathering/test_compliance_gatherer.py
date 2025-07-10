@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from src.services.context_assembler.gathering.compliance_gatherer import ComplianceGatherer
-from src.services.context_assembler.models import ContextType
+from src.services.context_assembly_service.gathering.compliance_gatherer import ComplianceGatherer
+from src.services.context_assembly_service.models import ContextType
 
 
 @pytest.mark.asyncio

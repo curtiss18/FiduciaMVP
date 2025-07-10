@@ -7,7 +7,7 @@ Requirement: 95%+ coverage for all models.
 
 import pytest
 from datetime import datetime, timedelta
-from src.services.context_assembler.models.quality_models import (
+from src.services.context_assembly_service.models.quality_models import (
     QualityMetrics,
     FormattingOptions
 )

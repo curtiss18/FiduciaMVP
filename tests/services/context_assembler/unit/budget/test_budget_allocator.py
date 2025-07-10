@@ -1,8 +1,8 @@
 """Tests for BudgetAllocator service."""
 
 import pytest
-from src.services.context_assembler.budget import BudgetAllocator
-from src.services.context_assembler.models import RequestType, ContextType, BudgetAllocation
+from src.services.context_assembly_service.budget import BudgetAllocator
+from src.services.context_assembly_service.models import RequestType, ContextType, BudgetAllocation
 
 
 class TestBudgetAllocator:
@@ -58,8 +58,8 @@ class TestBudgetAllocator:
     
     @pytest.mark.asyncio
     async def test_oversized_user_input_adjustment(self):
-        # Create long input that exceeds 2000 token budget (8000+ chars = 2000+ tokens)
-        long_input = "a" * 10000
+        # Create long input that exceeds 2000 token budget (20000+ chars = 2500+ tokens)
+        long_input = "a" * 20000
         allocations = await self.allocator.allocate_budget(RequestType.CREATION, long_input)
         
         # User input should be adjusted upward

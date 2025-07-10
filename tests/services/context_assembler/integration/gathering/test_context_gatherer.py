@@ -4,8 +4,8 @@ import pytest
 from unittest.mock import AsyncMock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services.context_assembler.gathering.context_gatherer import ContextGatherer
-from src.services.context_assembler.models import ContextType, ContextElement
+from src.services.context_assembly_service.gathering.context_gatherer import ContextGatherer
+from src.services.context_assembly_service.models import ContextType, ContextElement
 
 
 @pytest.mark.asyncio
@@ -18,7 +18,7 @@ async def test_context_gatherer_all_context():
         "rules": [{"title": "Test Rule", "content_text": "Test content"}]
     }
     
-    with patch('src.services.context_assembler.gathering.conversation_gatherer.ConversationManager') as mock_cm:
+    with patch('src.services.context_assembly_service.gathering.conversation_gatherer.ConversationManager') as mock_cm:
         mock_manager = AsyncMock()
         mock_cm.return_value = mock_manager
         mock_manager.get_conversation_context.return_value = "Previous conversation"
@@ -43,7 +43,7 @@ async def test_context_gatherer_conversation_only():
     gatherer = ContextGatherer()
     mock_session = AsyncMock(spec=AsyncSession)
     
-    with patch('src.services.context_assembler.gathering.conversation_gatherer.ConversationManager') as mock_cm:
+    with patch('src.services.context_assembly_service.gathering.conversation_gatherer.ConversationManager') as mock_cm:
         mock_manager = AsyncMock()
         mock_cm.return_value = mock_manager
         mock_manager.get_conversation_context.return_value = "Previous conversation"
@@ -83,7 +83,7 @@ async def test_context_gatherer_partial_failure():
     }
     
     # Mock conversation gatherer to fail
-    with patch('src.services.context_assembler.gathering.conversation_gatherer.ConversationManager') as mock_cm:
+    with patch('src.services.context_assembly_service.gathering.conversation_gatherer.ConversationManager') as mock_cm:
         mock_manager = AsyncMock()
         mock_cm.return_value = mock_manager
         mock_manager.get_conversation_context.side_effect = Exception("Database error")
@@ -105,7 +105,7 @@ async def test_context_gatherer_no_context():
     gatherer = ContextGatherer()
     mock_session = AsyncMock(spec=AsyncSession)
     
-    with patch('src.services.context_assembler.gathering.conversation_gatherer.ConversationManager') as mock_cm:
+    with patch('src.services.context_assembly_service.gathering.conversation_gatherer.ConversationManager') as mock_cm:
         mock_manager = AsyncMock()
         mock_cm.return_value = mock_manager
         mock_manager.get_conversation_context.return_value = None

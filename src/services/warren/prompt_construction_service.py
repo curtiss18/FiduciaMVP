@@ -20,8 +20,7 @@ import logging
 from typing import Dict, Any, List, Optional
 
 from src.services.prompt_service import prompt_service
-from src.services.context_assembly_service import ContextAssembler
-from src.services.advanced_context_assembler import AdvancedContextAssembler
+from src.services.context_assembly_service.orchestrator import BasicContextAssemblyOrchestrator
 from src.core.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
@@ -337,19 +336,20 @@ Please reference and incorporate information from these documents when creating 
         """
         # Initialize Phase 2 advanced context assembly system
         async with AsyncSessionLocal() as db_session:
-            # Use Phase 2 Advanced Context Assembler for sophisticated prioritization
-            context_assembler = AdvancedContextAssembler(db_session)
+            # Use new BasicContextAssemblyOrchestrator for intelligent context building
+            context_assembler = BasicContextAssemblyOrchestrator()
             
             # Get session_id from context_data if available
             session_id = context_data.get("session_id")
             
-            # Use Phase 2 AdvancedContextAssembler for intelligent context building
+            # Use new context assembly orchestrator for intelligent context building
             assembly_result = await context_assembler.build_warren_context(
                 session_id=session_id or "no-session",
                 user_input=user_request,
                 context_data=context_data,
                 current_content=None,  # New generation, no current content
-                youtube_context=context_data.get("youtube_context")
+                youtube_context=context_data.get("youtube_context"),
+                db_session=db_session  # Pass session as parameter
             )
             
             # Get the appropriate system prompt
@@ -417,14 +417,15 @@ Generate the content now:"""
         Phase 1 fallback path.
         """
         async with AsyncSessionLocal() as db_session:
-            context_assembler = ContextAssembler(db_session)
+            context_assembler = BasicContextAssemblyOrchestrator()
             
             assembly_result = await context_assembler.build_warren_context(
                 session_id=context_data.get("session_id", "no-session"),
                 user_input=user_request,
                 context_data=context_data,
                 current_content=None,  # New generation, no current content
-                youtube_context=context_data.get("youtube_context")
+                youtube_context=context_data.get("youtube_context"),
+                db_session=db_session  # Pass session as parameter
             )
             
             optimized_context = assembly_result["context"]

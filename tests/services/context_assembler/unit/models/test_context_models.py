@@ -7,7 +7,7 @@ Requirement: 95%+ coverage for all models.
 
 import pytest
 from datetime import datetime
-from src.services.context_assembler.models.context_models import (
+from src.services.context_assembly_service.models.context_models import (
     RequestType,
     ContextType,
     ContextElement,
