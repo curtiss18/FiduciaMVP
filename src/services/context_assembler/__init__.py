@@ -27,8 +27,8 @@ from .interfaces import (
 
 # Import services as they are implemented
 from .budget import BudgetAllocator, RequestTypeAnalyzer
+from .gathering import ContextGatherer, ConversationGatherer, ComplianceGatherer, DocumentGatherer
 # TODO: Add as implemented  
-# from .gathering import ConversationGatherer, ComplianceGatherer
 # from .optimization import TextTokenManager, ContextOptimizer
 # from .assembly import ContextBuilder, QualityAssessor
 # from .orchestrator import ContextAssemblyOrchestrator
@@ -97,10 +97,12 @@ __all__ = [
     # Services (implemented)
     'BudgetAllocator',
     'RequestTypeAnalyzer',
+    'ContextGatherer',
+    'ConversationGatherer',
+    'ComplianceGatherer', 
+    'DocumentGatherer',
     
     # Services (TODO: Add as implemented)
-    # 'ConversationGatherer',
-    # 'ComplianceGatherer', 
     # 'TextTokenManager',
     # 'ContextOptimizer',
     # 'ContextBuilder',

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..models import ContextElement
 from .conversation_gatherer import ConversationGatherer
 from .compliance_gatherer import ComplianceGatherer
+from .document_gatherer import DocumentGatherer
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,7 @@ class ContextGatherer:
     def __init__(self):
         self.conversation_gatherer = ConversationGatherer()
         self.compliance_gatherer = ComplianceGatherer()
+        self.document_gatherer = DocumentGatherer()
     
     async def gather_all_context(
         self,
@@ -45,6 +47,17 @@ class ContextGatherer:
         except Exception as e:
             logger.warning(f"Failed to gather compliance context: {e}")
         
+        # Gather document context
+        try:
+            document_elements = await self.document_gatherer.gather_context(
+                session_id=session_id,
+                db_session=db_session,
+                context_data=context_data
+            )
+            all_elements.extend(document_elements)
+        except Exception as e:
+            logger.warning(f"Failed to gather document context: {e}")
+        
         return all_elements
     
     async def gather_conversation_only(
@@ -65,4 +78,15 @@ class ContextGatherer:
         
         return await self.compliance_gatherer.gather_context(
             context_data=context_data
+        )
+    
+    async def gather_documents_only(
+        self,
+        session_id: str,
+        db_session: AsyncSession
+    ) -> List[ContextElement]:
+        
+        return await self.document_gatherer.gather_context(
+            session_id=session_id,
+            db_session=db_session
         )
