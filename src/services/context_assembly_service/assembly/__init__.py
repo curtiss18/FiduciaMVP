@@ -4,11 +4,11 @@ Context Assembly Services Package
 Services for final context assembly and quality assessment.
 """
 
-# TODO: Implement in SCRUM-111 and SCRUM-112
-# from .context_builder import ContextBuilder
+from .context_builder import ContextBuilder
+# TODO: Implement in SCRUM-112
 # from .quality_assessor import QualityAssessor
 
 __all__ = [
-    # 'ContextBuilder',
+    'ContextBuilder',
     # 'QualityAssessor'
 ]
