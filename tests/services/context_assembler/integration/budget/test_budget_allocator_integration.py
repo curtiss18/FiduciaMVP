@@ -1,7 +1,7 @@
 """Integration test for BudgetAllocator."""
 
 import pytest
-from src.services.context_assembler import BudgetAllocator, RequestType, ContextType
+from src.services.context_assembly_service import BudgetAllocator, RequestType, ContextType
 
 
 @pytest.mark.asyncio

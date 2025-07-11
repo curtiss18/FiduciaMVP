@@ -115,7 +115,7 @@ class TestPromptConstructionService:
     @pytest.mark.asyncio
     async def test_build_generation_prompt_advanced(self, service, sample_context_data, mock_prompt_service):
         """Test advanced generation prompt building."""
-        with patch('src.services.warren.prompt_construction_service.AdvancedContextAssembler') as mock_class:
+        with patch('src.services.warren.prompt_construction_service.BasicContextAssemblyOrchestrator') as mock_class:
             with patch('src.services.warren.prompt_construction_service.AsyncSessionLocal') as mock_session:
                 # Setup mocks
                 mock_instance = AsyncMock()
@@ -152,7 +152,7 @@ class TestPromptConstructionService:
     @pytest.mark.asyncio 
     async def test_build_generation_prompt_standard(self, service, sample_context_data, mock_prompt_service):
         """Test standard generation prompt building."""
-        with patch('src.services.warren.prompt_construction_service.ContextAssembler') as mock_class:
+        with patch('src.services.warren.prompt_construction_service.BasicContextAssemblyOrchestrator') as mock_class:
             with patch('src.services.warren.prompt_construction_service.AsyncSessionLocal') as mock_session:
                 # Setup mocks
                 mock_instance = AsyncMock()
@@ -499,8 +499,8 @@ class TestPromptConstructionService:
     # Test error handling
     @pytest.mark.asyncio
     async def test_advanced_generation_assembler_failure(self, service, sample_context_data, mock_prompt_service):
-        """Test handling of AdvancedContextAssembler failure."""
-        with patch('src.services.warren.prompt_construction_service.AdvancedContextAssembler') as mock_class:
+        """Test handling of BasicContextAssemblyOrchestrator failure."""
+        with patch('src.services.warren.prompt_construction_service.BasicContextAssemblyOrchestrator') as mock_class:
             with patch('src.services.warren.prompt_construction_service.AsyncSessionLocal') as mock_session:
                 # Setup mock to raise exception
                 mock_instance = AsyncMock()
@@ -518,8 +518,8 @@ class TestPromptConstructionService:
 
     @pytest.mark.asyncio
     async def test_standard_generation_assembler_failure(self, service, sample_context_data, mock_prompt_service):
-        """Test handling of ContextAssembler failure."""
-        with patch('src.services.warren.prompt_construction_service.ContextAssembler') as mock_class:
+        """Test handling of BasicContextAssemblyOrchestrator failure."""
+        with patch('src.services.warren.prompt_construction_service.BasicContextAssemblyOrchestrator') as mock_class:
             with patch('src.services.warren.prompt_construction_service.AsyncSessionLocal') as mock_session:
                 # Setup mock to raise exception
                 mock_instance = AsyncMock()

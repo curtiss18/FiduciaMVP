@@ -2,7 +2,7 @@
 Context Assembler Models Package
 
 Shared data models, enums, and dataclasses for the context assembler service.
-Extracted from monolithic ContextAssembler and AdvancedContextAssembler classes.
+Extracted from monolithic ContextAssembler class for the new context assembly service.
 """
 
 from .context_models import (

@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services.context_assembler import ContextGatherer, DocumentGatherer, ContextType
+from src.services.context_assembly_service import ContextGatherer, DocumentGatherer, ContextType
 
 
 class TestDocumentContextIntegration:
@@ -68,7 +68,7 @@ class TestDocumentContextIntegration:
     async def test_document_context_with_budget_allocation(self):
         """Test that document context integrates with budget allocation."""
         
-        from src.services.context_assembler import BudgetAllocator, RequestType
+        from src.services.context_assembly_service import BudgetAllocator, RequestType
         
         budget_allocator = BudgetAllocator()
         budget = await budget_allocator.allocate_budget(

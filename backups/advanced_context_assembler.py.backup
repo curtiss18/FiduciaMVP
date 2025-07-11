@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from enum import Enum
 from collections import defaultdict
 
-from src.services.context_assembler import ContextAssembler, TokenManager, ContextType, RequestType
+from src.services.context_assembly_service import ContextAssembler, TokenManager, ContextType, RequestType
 
 logger = logging.getLogger(__name__)
 

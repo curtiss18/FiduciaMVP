@@ -4,8 +4,8 @@ import pytest
 from unittest.mock import AsyncMock, Mock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services.context_assembler.gathering.context_gatherer import ContextGatherer
-from src.services.context_assembler.models import ContextElement, ContextType
+from src.services.context_assembly_service.gathering.context_gatherer import ContextGatherer
+from src.services.context_assembly_service.models import ContextElement, ContextType
 
 
 class TestContextGathererDocumentIntegration:

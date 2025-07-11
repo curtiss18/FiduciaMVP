@@ -69,7 +69,7 @@ class TestAdvancedGenerationStrategy:
     @pytest.mark.asyncio
     async def test_generate_content_success(self, strategy, sample_context_data):
         """Test successful content generation."""
-        with patch('src.services.warren.strategies.advanced_generation_strategy.AdvancedContextAssembler') as mock_assembler_class:
+        with patch('src.services.warren.strategies.advanced_generation_strategy.BasicContextAssemblyOrchestrator') as mock_assembler_class:
             with patch('src.services.warren.strategies.advanced_generation_strategy.AsyncSessionLocal'):
                 with patch('src.services.warren.strategies.advanced_generation_strategy.prompt_service') as mock_prompt:
                     with patch('src.services.warren.strategies.advanced_generation_strategy.claude_service') as mock_claude:
@@ -118,7 +118,7 @@ class TestAdvancedGenerationStrategy:
     @pytest.mark.asyncio
     async def test_generate_content_refinement(self, strategy, sample_context_data):
         """Test content generation for refinement scenario."""
-        with patch('src.services.warren.strategies.advanced_generation_strategy.AdvancedContextAssembler') as mock_assembler_class:
+        with patch('src.services.warren.strategies.advanced_generation_strategy.BasicContextAssemblyOrchestrator') as mock_assembler_class:
             with patch('src.services.warren.strategies.advanced_generation_strategy.AsyncSessionLocal'):
                 with patch('src.services.warren.strategies.advanced_generation_strategy.prompt_service') as mock_prompt:
                     with patch('src.services.warren.strategies.advanced_generation_strategy.claude_service') as mock_claude:
@@ -160,7 +160,7 @@ class TestAdvancedGenerationStrategy:
     @pytest.mark.asyncio
     async def test_generate_content_failure(self, strategy, sample_context_data):
         """Test content generation failure handling."""
-        with patch('src.services.warren.strategies.advanced_generation_strategy.AdvancedContextAssembler') as mock_assembler_class:
+        with patch('src.services.warren.strategies.advanced_generation_strategy.BasicContextAssemblyOrchestrator') as mock_assembler_class:
             with patch('src.services.warren.strategies.advanced_generation_strategy.AsyncSessionLocal'):
                 
                 # Setup mock to raise exception
@@ -222,7 +222,7 @@ class TestStandardGenerationStrategy:
     @pytest.mark.asyncio
     async def test_generate_content_success(self, strategy, sample_context_data):
         """Test successful content generation."""
-        with patch('src.services.warren.strategies.standard_generation_strategy.ContextAssembler') as mock_assembler_class:
+        with patch('src.services.warren.strategies.standard_generation_strategy.BasicContextAssemblyOrchestrator') as mock_assembler_class:
             with patch('src.services.warren.strategies.standard_generation_strategy.AsyncSessionLocal'):
                 with patch('src.services.warren.strategies.standard_generation_strategy.prompt_service') as mock_prompt:
                     with patch('src.services.warren.strategies.standard_generation_strategy.claude_service') as mock_claude:

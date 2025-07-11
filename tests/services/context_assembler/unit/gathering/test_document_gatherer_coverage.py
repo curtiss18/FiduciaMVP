@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services.context_assembler.gathering.document_gatherer import DocumentGatherer
+from src.services.context_assembly_service.gathering.document_gatherer import DocumentGatherer
 
 
 class TestDocumentGathererCoverage:
@@ -12,14 +12,14 @@ class TestDocumentGathererCoverage:
     @pytest.mark.asyncio 
     async def test_tiktoken_initialization_failure(self):
         """Test DocumentGatherer initialization when tiktoken fails."""
-        with patch('src.services.context_assembler.gathering.document_gatherer.tiktoken.encoding_for_model', side_effect=Exception("tiktoken error")):
+        with patch('src.services.context_assembly_service.gathering.document_gatherer.tiktoken.encoding_for_model', side_effect=Exception("tiktoken error")):
             gatherer = DocumentGatherer()
             assert gatherer.tokenizer is None
     
     @pytest.mark.asyncio
     async def test_token_counting_with_no_tokenizer(self):
         """Test token counting fallback when no tokenizer available."""
-        with patch('src.services.context_assembler.gathering.document_gatherer.tiktoken.encoding_for_model', side_effect=Exception("tiktoken error")):
+        with patch('src.services.context_assembly_service.gathering.document_gatherer.tiktoken.encoding_for_model', side_effect=Exception("tiktoken error")):
             gatherer = DocumentGatherer()
             
             # Test with text

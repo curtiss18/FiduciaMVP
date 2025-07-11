@@ -9,7 +9,7 @@ import time
 from typing import Dict, Any, Optional
 
 from .content_generation_strategy import ContentGenerationStrategy, GenerationResult
-from src.services.context_assembler import ContextAssembler
+from src.services.context_assembly_service.orchestrator import BasicContextAssemblyOrchestrator
 from src.services.prompt_service import prompt_service
 from src.services.claude_service import claude_service
 from src.core.database import AsyncSessionLocal
@@ -37,14 +37,15 @@ class StandardGenerationStrategy(ContentGenerationStrategy):
         
         try:
             async with AsyncSessionLocal() as db_session:
-                context_assembler = ContextAssembler(db_session)
+                context_assembler = BasicContextAssemblyOrchestrator()
                 
                 assembly_result = await context_assembler.build_warren_context(
                     session_id=context_data.get("session_id", "no-session"),
                     user_input=user_request,
                     context_data=context_data,
                     current_content=current_content,
-                    youtube_context=youtube_context
+                    youtube_context=youtube_context,
+                    db_session=db_session  # Pass session as parameter
                 )
                 
                 optimized_context = assembly_result["context"]

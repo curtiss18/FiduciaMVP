@@ -218,7 +218,7 @@ class ContentStatusManager:
         """Execute the database update with PostgreSQL enum handling."""
         try:
             # Build dynamic SQL based on what needs to be updated
-            set_clauses = ["status = CAST(:status AS contentstatus)"]
+            set_clauses = ["status = :status"]
             query_params = {
                 "status": new_status.lower(),
                 "content_id": content_id

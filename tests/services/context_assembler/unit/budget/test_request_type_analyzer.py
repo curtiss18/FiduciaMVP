@@ -1,8 +1,8 @@
 """Tests for RequestTypeAnalyzer service."""
 
 import pytest
-from src.services.context_assembler.budget import RequestTypeAnalyzer
-from src.services.context_assembler.models import RequestType
+from src.services.context_assembly_service.budget import RequestTypeAnalyzer
+from src.services.context_assembly_service.models import RequestType
 
 
 class TestRequestTypeAnalyzer:

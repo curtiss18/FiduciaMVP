@@ -1,7 +1,7 @@
 """
 Advanced Generation Strategy
 
-Uses Phase 2 AdvancedContextAssembler for sophisticated context optimization.
+Uses the new context assembly service for sophisticated context optimization.
 """
 
 import logging
@@ -9,7 +9,7 @@ import time
 from typing import Dict, Any, Optional
 
 from .content_generation_strategy import ContentGenerationStrategy, GenerationResult
-from src.services.advanced_context_assembler import AdvancedContextAssembler
+from src.services.context_assembly_service.orchestrator import BasicContextAssemblyOrchestrator
 from src.services.prompt_service import prompt_service
 from src.services.claude_service import claude_service
 from src.core.database import AsyncSessionLocal
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class AdvancedGenerationStrategy(ContentGenerationStrategy):
-    """Advanced content generation using AdvancedContextAssembler."""
+    """Advanced content generation using the new context assembly service."""
     
     async def generate_content(
         self,
@@ -30,14 +30,14 @@ class AdvancedGenerationStrategy(ContentGenerationStrategy):
         is_refinement: bool = False,
         youtube_context: Optional[Dict[str, Any]] = None
     ) -> GenerationResult:
-        """Generate content using Phase 2 AdvancedContextAssembler."""
+        """Generate content using the new context assembly service."""
         result = GenerationResult()
         result.strategy_used = "advanced"
         start_time = time.time()
         
         try:
             async with AsyncSessionLocal() as db_session:
-                context_assembler = AdvancedContextAssembler(db_session)
+                context_assembler = BasicContextAssemblyOrchestrator()
                 session_id = context_data.get("session_id")
                 
                 assembly_result = await context_assembler.build_warren_context(
@@ -45,7 +45,8 @@ class AdvancedGenerationStrategy(ContentGenerationStrategy):
                     user_input=user_request,
                     context_data=context_data,
                     current_content=current_content,
-                    youtube_context=youtube_context
+                    youtube_context=youtube_context,
+                    db_session=db_session  # Pass session as parameter
                 )
                 
                 prompt_context = {

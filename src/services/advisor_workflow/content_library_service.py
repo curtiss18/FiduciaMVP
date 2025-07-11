@@ -97,7 +97,8 @@ class ContentLibraryService:
                         "audience_type": audience_type_str,
                         "status": status_str,
                         "created_at": created_at.isoformat(),
-                        "source_session_id": source_session_id
+                        "source_session_id": source_session_id,
+                        "source_message_id": source_message_id
                     }
                 }
                 
@@ -289,7 +290,7 @@ class ContentLibraryService:
                         SELECT COUNT(id) 
                         FROM advisor_content 
                         WHERE advisor_id = :advisor_id 
-                        AND status = CAST(:status AS contentstatus)
+                        AND status = :status
                     """)
                     result = await db.execute(query, {
                         "advisor_id": advisor_id,
