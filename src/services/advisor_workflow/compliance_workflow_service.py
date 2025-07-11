@@ -67,7 +67,7 @@ class ComplianceWorkflowService:
                 # Update content with compliance review information
                 query = text("""
                     UPDATE advisor_content 
-                    SET status = CAST('submitted' AS contentstatus),
+                    SET status = 'submitted',
                         cco_review_status = 'submitted',
                         cco_email = :cco_email,
                         submitted_for_review_at = NOW(),
@@ -82,22 +82,28 @@ class ComplianceWorkflowService:
                 await db.commit()
                 
                 # Send email notification to CCO using NotificationCoordinator
-                email_sent = await self.notification_coordinator.send_review_notification(
-                    cco_email=cco_email,
-                    content=content,
-                    review_token=review_token,
-                    notes=notes
-                )
+                try:
+                    email_sent = await self.notification_coordinator.send_review_notification(
+                        cco_email=cco_email,
+                        content=content,
+                        review_token=review_token,
+                        notes=notes
+                    )
+                except Exception as email_error:
+                    logger.warning(f"Email notification failed for content {content_id}: {email_error}")
+                    email_sent = False  # Continue workflow even if email fails
                 
                 logger.info(f"Content {content_id} submitted for review to {cco_email}")
                 
                 return {
                     "status": "success",
                     "content_id": content_id,
-                    "review_token": review_token,
-                    "cco_email": cco_email,
-                    "email_sent": email_sent,
-                    "submitted_at": datetime.now().isoformat()
+                    "review": {
+                        "review_token": review_token,
+                        "cco_email": cco_email,
+                        "submitted_at": datetime.now().isoformat(),
+                        "email_sent": email_sent
+                    }
                 }
                 
             except Exception as e:
@@ -133,7 +139,7 @@ class ComplianceWorkflowService:
                 if notes:
                     query = text("""
                         UPDATE advisor_content 
-                        SET status = CAST(:status AS contentstatus),
+                        SET status = :status,
                             cco_review_status = :status,
                             cco_review_notes = :notes,
                             reviewed_by = :reviewer,
@@ -150,7 +156,7 @@ class ComplianceWorkflowService:
                 else:
                     query = text("""
                         UPDATE advisor_content 
-                        SET status = CAST(:status AS contentstatus),
+                        SET status = :status,
                             cco_review_status = :status,
                             reviewed_by = :reviewer,
                             reviewed_at = NOW(),

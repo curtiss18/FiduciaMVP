@@ -15,12 +15,18 @@ if project_root not in sys.path:
 # Set test environment
 os.environ["PYTEST_CURRENT_TEST"] = "true"
 
-# Import all fixtures to make them available
-try:
-    from .fixtures import *
-except ImportError:
-    # Fallback for different import contexts
-    pass
+# Import database fixtures
+from tests.fixtures.database import TestDatabaseManager
+
+# Global test database manager
+test_db_manager = TestDatabaseManager()
+
+@pytest.fixture(scope="session")
+async def test_database():
+    """Session-scoped test database setup."""
+    await test_db_manager.setup_database()
+    yield test_db_manager
+    await test_db_manager.cleanup_database()
 
 
 @pytest.fixture(scope="session")

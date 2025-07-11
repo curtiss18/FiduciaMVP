@@ -126,7 +126,7 @@ class ContentGenerationOrchestrator:
                 generation_result["content"],
                 {
                     "context_data": context_data,
-                    "session_documents": session_documents,
+                    "session_documents": session_docs,
                     "conversation_context": conversation_context,
                     "context_quality": context_quality,
                     "generation_metadata": generation_result.get("metadata", {}),

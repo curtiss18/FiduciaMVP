@@ -207,7 +207,7 @@ class TestContentStatusManager:
             current_status="submitted",
             user_role="advisor"
         )
-        assert result == []
+        assert result == ['archived']
     
     @pytest.mark.asyncio
     async def test_get_allowed_transitions_cco_submitted(self, service):

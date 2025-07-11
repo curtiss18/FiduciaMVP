@@ -66,7 +66,15 @@ class WorkflowOrchestrator:
     
     async def create_advisor_session(self, advisor_id: str, title: Optional[str] = None) -> Dict[str, Any]:
         """Create new Warren chat session."""
-        return await self.conversation_manager.create_session(advisor_id, title)
+        try:
+            return await self.conversation_manager.create_session(advisor_id, title)
+        except Exception as e:
+            logger.error(f"Failed to create session for advisor {advisor_id}: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "advisor_id": advisor_id
+            }
     
     async def save_warren_message(self, session_id: str, message_type: str, content: str, 
                                  metadata: Optional[Dict] = None) -> Dict[str, Any]:
@@ -90,12 +98,20 @@ class WorkflowOrchestrator:
                                   source_message_id: Optional[int] = None, advisor_notes: Optional[str] = None,
                                   intended_channels: Optional[List[str]] = None) -> Dict[str, Any]:
         """Save content to advisor's library."""
-        return await self.content_library.save_content(
-            advisor_id=advisor_id, title=title, content_text=content_text, content_type=content_type,
-            audience_type=audience_type, source_session_id=source_session_id,
-            source_message_id=source_message_id, advisor_notes=advisor_notes,
-            intended_channels=intended_channels
-        )
+        try:
+            return await self.content_library.save_content(
+                advisor_id=advisor_id, title=title, content_text=content_text, content_type=content_type,
+                audience_type=audience_type, source_session_id=source_session_id,
+                source_message_id=source_message_id, advisor_notes=advisor_notes,
+                intended_channels=intended_channels
+            )
+        except Exception as e:
+            logger.error(f"Failed to save content for advisor {advisor_id}: {e}")
+            return {
+                "status": "error", 
+                "error": str(e),
+                "advisor_id": advisor_id
+            }
     
     async def get_advisor_content_library(self, advisor_id: str, status_filter: Optional[str] = None,
                                          content_type_filter: Optional[str] = None, limit: int = 50, 
