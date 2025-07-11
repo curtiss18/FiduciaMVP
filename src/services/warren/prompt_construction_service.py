@@ -158,8 +158,8 @@ Wrap your refined content in ##MARKETINGCONTENT## delimiters and explain your ch
         Optimize context to fit within token limits while preserving quality.
         
         Note: This is a placeholder for token optimization logic.
-        In the existing enhanced_warren_service, this is handled by ContextAssembler
-        and AdvancedContextAssembler services.
+        In the existing enhanced_warren_service, this is handled by the
+        new context assembly service.
         
         Args:
             context_parts: List of context sections to optimize
@@ -329,7 +329,7 @@ Please reference and incorporate information from these documents when creating 
         audience_type: Optional[str]
     ) -> str:
         """
-        Build advanced generation prompt using Phase 2 AdvancedContextAssembler.
+        Build advanced generation prompt using the new context assembly service.
         
         Extracted from enhanced_warren_service._generate_with_enhanced_context()
         advanced context assembly path.

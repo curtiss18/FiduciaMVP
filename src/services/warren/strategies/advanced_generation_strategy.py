@@ -1,7 +1,7 @@
 """
 Advanced Generation Strategy
 
-Uses Phase 2 AdvancedContextAssembler for sophisticated context optimization.
+Uses the new context assembly service for sophisticated context optimization.
 """
 
 import logging
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class AdvancedGenerationStrategy(ContentGenerationStrategy):
-    """Advanced content generation using AdvancedContextAssembler."""
+    """Advanced content generation using the new context assembly service."""
     
     async def generate_content(
         self,
@@ -30,7 +30,7 @@ class AdvancedGenerationStrategy(ContentGenerationStrategy):
         is_refinement: bool = False,
         youtube_context: Optional[Dict[str, Any]] = None
     ) -> GenerationResult:
-        """Generate content using Phase 2 AdvancedContextAssembler."""
+        """Generate content using the new context assembly service."""
         result = GenerationResult()
         result.strategy_used = "advanced"
         start_time = time.time()
