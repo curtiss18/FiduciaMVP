@@ -115,12 +115,6 @@ class ContentGenerationOrchestrator:
                 "context_quality": context_quality
             })
             
-            # Save conversation turn if applicable
-            if session_id and use_conversation_context and generation_result.get("content"):
-                await self.conversation_service.save_conversation_turn(
-                    session_id, user_request, generation_result["content"], context_data
-                )
-            
             # Assemble final response with all metadata
             return self._assemble_response(
                 generation_result["content"],

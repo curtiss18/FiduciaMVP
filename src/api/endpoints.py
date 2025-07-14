@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import logging
 from src.services.claude_service import claude_service
-from src.services.async_knowledge_service import async_kb_service
 from src.services.warren_database_service import warren_db_service
 from src.services.warren import enhanced_warren_service
 from src.services.embedding_service import embedding_service
