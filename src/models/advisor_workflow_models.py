@@ -13,7 +13,7 @@ from sqlalchemy.orm import relationship
 import enum
 
 # Import shared Base from main database models
-from src.models.database import Base
+from src.models.refactored_database import Base
 
 # Enums for advisor workflow
 class ContentStatus(enum.Enum):

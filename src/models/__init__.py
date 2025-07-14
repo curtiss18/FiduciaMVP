@@ -1,9 +1,6 @@
 # Models package - Import all models to ensure relationships work properly
 
-# Import base models first
-from .database import Base
-
-# Import refactored models (main application models)
+# Import refactored models (main application models) - includes Base
 from .refactored_database import *
 
 # Import advisor workflow models 

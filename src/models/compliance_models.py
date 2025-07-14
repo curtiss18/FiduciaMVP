@@ -13,7 +13,7 @@ from sqlalchemy.orm import relationship, backref
 import enum
 
 # Import shared Base from main database models
-from src.models.database import Base
+from src.models.refactored_database import Base
 # Note: AdvisorContent will be referenced as string to avoid circular imports
 
 # Enums for compliance workflow

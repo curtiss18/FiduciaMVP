@@ -7,7 +7,7 @@ Handles advisor contact management and audience grouping functionality
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from src.models.database import Base
+from src.models.refactored_database import Base
 
 # Association table for many-to-many relationship between audiences and contacts
 audience_contacts = Table(

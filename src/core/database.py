@@ -34,7 +34,7 @@ async def get_db():
 
 async def create_tables():
     """Create all database tables"""
-    from src.models.database import Base
+    from src.models.refactored_database import Base
     
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
