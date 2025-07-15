@@ -2,23 +2,28 @@
 Advanced Generation Strategy
 
 Uses the new context assembly service for sophisticated context optimization.
+Inherits common functionality from BaseGenerationStrategy to eliminate code duplication.
 """
 
 import logging
 import time
 from typing import Dict, Any, Optional
 
-from .content_generation_strategy import ContentGenerationStrategy, GenerationResult
+from .base_generation_strategy import BaseGenerationStrategy
+from .content_generation_strategy import GenerationResult
 from src.services.context_assembly_service.orchestrator import BasicContextAssemblyOrchestrator
 from src.services.prompt_service import prompt_service
 from src.services.claude_service import claude_service
+from src.services.warren.youtube_context_service import youtube_context_service
 from src.core.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 
 
-class AdvancedGenerationStrategy(ContentGenerationStrategy):
-    """Advanced content generation using the new context assembly service."""
+class AdvancedGenerationStrategy(BaseGenerationStrategy):
+    """
+    Advanced content generation using sophisticated context assembly.
+    """
     
     async def generate_content(
         self,
@@ -49,11 +54,8 @@ class AdvancedGenerationStrategy(ContentGenerationStrategy):
                     db_session=db_session  # Pass session as parameter
                 )
                 
-                prompt_context = {
-                    'platform': self._extract_platform_from_content_type(content_type),
-                    'content_type': content_type,
-                    'audience_type': audience_type
-                }
+                # Use base class method for platform extraction and context building
+                prompt_context = self._build_base_prompt_context(content_type, audience_type)
                 
                 if is_refinement and current_content:
                     refinement_context = {
@@ -109,34 +111,39 @@ Generate the content now:"""
                     "phase": "Phase_2_Advanced"
                 }
                 
-                result.content = content
-                result.success = True
-                result.metadata = {
-                    "assembly_result": assembly_result,
-                    "token_management": context_data["token_management"],
-                    "phase": "Phase_2_Advanced",
-                    "document_count": len(session_documents),
-                    "has_documents": has_documents
-                }
+                # Populate success result using base class method
+                self._populate_success_result(
+                    result=result,
+                    content=content,
+                    strategy_name="advanced",
+                    start_time=start_time,
+                    # Enhanced metadata specific to Advanced strategy
+                    assembly_result=assembly_result,
+                    token_management=context_data["token_management"],
+                    phase="Phase_2_Advanced",
+                    document_count=len(session_documents),
+                    has_documents=has_documents,
+                    quality_metrics=assembly_result.get("quality_metrics", {}),
+                    relevance_scores=assembly_result.get("relevance_scores", {}),
+                    priority_scores=assembly_result.get("priority_scores", {})
+                )
                 
                 logger.info("✅ Advanced generation strategy completed successfully")
                 
         except Exception as e:
             logger.error(f"❌ Advanced generation strategy failed: {e}")
-            result.success = False
-            result.error_message = str(e)
-            result.metadata = {"error_type": "advanced_generation_failure"}
-        
-        finally:
-            result.generation_time = time.time() - start_time
+            return self._handle_generation_error(e, "advanced")
         
         return result
     
     def can_handle(self, context_data: Dict[str, Any]) -> bool:
-        """Check if advanced strategy can handle the given context."""
+        """
+        Advanced context validation with sophisticated type checking.
+        """
         try:
             # Validate that context_data is a dict and has the expected structure
             if not isinstance(context_data, dict):
+                logger.debug("Advanced strategy: context_data is not a dictionary")
                 return False
             
             # Check for the presence of key context elements
@@ -147,21 +154,32 @@ Generate the content now:"""
             
             # Validate that lists are actually lists (not strings or other types)
             if marketing_examples is not None and not isinstance(marketing_examples, list):
+                logger.debug("Advanced strategy: marketing_examples is not a list")
                 return False
             if disclaimers is not None and not isinstance(disclaimers, list):
+                logger.debug("Advanced strategy: disclaimers is not a list")
                 return False
             if session_documents is not None and not isinstance(session_documents, list):
+                logger.debug("Advanced strategy: session_documents is not a list")
                 return False
             
-            # Check if we have any valid context
+            # Check if we have any valid context (this is the core capability check)
             has_context = bool(
                 marketing_examples or 
                 disclaimers or
                 conversation_context or
                 session_documents
             )
+            
+            if has_context:
+                logger.debug("Advanced strategy: Can handle context with rich data")
+            else:
+                logger.debug("Advanced strategy: No sufficient context available")
+                
             return has_context
-        except Exception:
+            
+        except Exception as e:
+            logger.warning(f"Advanced strategy can_handle() failed: {e}")
             return False
     
     def get_strategy_name(self) -> str:
@@ -172,15 +190,3 @@ Generate the content now:"""
     
     def requires_advanced_context(self) -> bool:
         return True
-    
-    def _extract_platform_from_content_type(self, content_type: str) -> str:
-        """Extract platform from content type."""
-        platform_mapping = {
-            'linkedin_post': 'linkedin',
-            'email_template': 'email',
-            'website_content': 'website',
-            'newsletter': 'newsletter',
-            'social_media': 'twitter',
-            'blog_post': 'website'
-        }
-        return platform_mapping.get(content_type.lower(), 'general')

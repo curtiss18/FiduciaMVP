@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 class PromptType:
     """Constants for different prompt types."""
     ADVANCED_GENERATION = "advanced_generation"
-    STANDARD_GENERATION = "standard_generation"
     LEGACY_GENERATION = "legacy_generation"
     REFINEMENT = "refinement"
     EMERGENCY = "emergency"

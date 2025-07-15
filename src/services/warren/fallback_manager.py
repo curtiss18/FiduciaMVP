@@ -5,7 +5,7 @@ Replaces scattered fallback logic from enhanced_warren_service.py.
 
 import logging
 import asyncio
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from enum import Enum
 import time
 
@@ -248,8 +248,7 @@ class FallbackManager:
             "vector_search": "text_search",
             "phase2_context_assembly": "phase1_context_assembly",
             "phase1_context_assembly": "legacy_context_assembly",
-            "advanced_generation": "standard_generation",
-            "standard_generation": "legacy_generation"
+            "advanced_generation": "legacy_generation"
         }
         
         alternative = alternatives.get(context.operation_type)
