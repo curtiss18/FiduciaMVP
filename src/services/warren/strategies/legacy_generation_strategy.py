@@ -1,22 +1,26 @@
 """
 Legacy Generation Strategy
 
-Manual context building for emergency fallback when other strategies fail.
 """
 
 import logging
 import time
 from typing import Dict, Any, Optional
 
-from .content_generation_strategy import ContentGenerationStrategy, GenerationResult
+from .base_generation_strategy import BaseGenerationStrategy
+from .content_generation_strategy import GenerationResult
 from src.services.prompt_service import prompt_service
 from src.services.claude_service import claude_service
+from src.services.warren.youtube_context_service import youtube_context_service
 
 logger = logging.getLogger(__name__)
 
 
-class LegacyGenerationStrategy(ContentGenerationStrategy):
-    """Legacy content generation using manual context building."""
+class LegacyGenerationStrategy(BaseGenerationStrategy):
+    """
+    Legacy content generation using manual context building.
+
+    """
     
     def __init__(self):
         self.max_transcript_length = 4000
@@ -48,29 +52,33 @@ class LegacyGenerationStrategy(ContentGenerationStrategy):
             
             content = await claude_service.generate_content(final_prompt)
             
-            result.content = content
-            result.success = True
-            result.metadata = {
-                "phase": "Legacy_Fallback",
-                "context_building": "manual",
-                "refinement": is_refinement
-            }
+            # Use base class method for success result population
+            self._populate_success_result(
+                result=result,
+                content=content,
+                strategy_name="legacy",
+                start_time=start_time,
+                # Legacy-specific metadata
+                phase="Legacy_Fallback",
+                context_building="manual",
+                refinement=is_refinement,
+                youtube_context_present=youtube_context is not None
+            )
             
             logger.info("✅ Legacy generation strategy completed successfully")
             
         except Exception as e:
             logger.error(f"❌ Legacy generation strategy failed: {e}")
-            result.success = False
-            result.error_message = str(e)
-            result.metadata = {"error_type": "legacy_generation_failure"}
-        
-        finally:
-            result.generation_time = time.time() - start_time
+            return self._handle_generation_error(e, "legacy")
         
         return result
     
     def can_handle(self, context_data: Dict[str, Any]) -> bool:
-        """Legacy strategy can always handle any context."""
+        """
+        Legacy strategy can always handle any context - this is the emergency fallback.
+
+        """
+        logger.debug("Legacy strategy: Always available as fallback")
         return True
     
     def get_strategy_name(self) -> str:
@@ -90,13 +98,14 @@ class LegacyGenerationStrategy(ContentGenerationStrategy):
         audience_type: Optional[str],
         current_content: str
     ) -> str:
-        """Build refinement prompt."""
+        """Build refinement prompt using base class context building."""
+        # Use base class method for prompt context
+        prompt_context = self._build_base_prompt_context(content_type, audience_type)
+        
         refinement_context = {
             'current_content': current_content,
             'refinement_request': user_request,
-            'platform': self._extract_platform_from_content_type(content_type),
-            'content_type': content_type,
-            'audience_type': audience_type
+            **prompt_context  # Include platform, content_type, audience_type
         }
         
         base_system_prompt = prompt_service.get_warren_refinement_prompt(refinement_context)
@@ -133,11 +142,8 @@ Wrap your refined content in ##MARKETINGCONTENT## delimiters and explain your ch
         youtube_context: Optional[Dict[str, Any]]
     ) -> str:
         """Build generation prompt using manual context building."""
-        prompt_context = {
-            'platform': self._extract_platform_from_content_type(content_type),
-            'content_type': content_type,
-            'audience_type': audience_type
-        }
+        # Use base class method for prompt context
+        prompt_context = self._build_base_prompt_context(content_type, audience_type)
         
         base_system_prompt = prompt_service.get_warren_system_prompt(prompt_context)
         
@@ -171,9 +177,9 @@ Wrap your refined content in ##MARKETINGCONTENT## delimiters and explain your ch
             for disclaimer in disclaimers[:2]:
                 context_parts.append(f"\n**{disclaimer['title']}**: {disclaimer['content_text'][:200]}...")
         
-        # Add YouTube context
+        # Add YouTube context using shared service
         if youtube_context:
-            context_parts = self._add_youtube_context(context_parts, youtube_context)
+            context_parts = youtube_context_service.add_youtube_context(context_parts, youtube_context)
         
         knowledge_context = "\n".join(context_parts)
         
@@ -196,42 +202,3 @@ Based on the compliance examples and requirements shown above, please create com
 Remember to wrap your final marketing content in ##MARKETINGCONTENT## delimiters.
 
 Generate the content now:"""
-    
-    def _add_youtube_context(self, context_parts: list, youtube_context: Dict[str, Any]) -> list:
-        """Add YouTube context to context parts."""
-        context_parts.append("\n## VIDEO CONTEXT:")
-        video_info = youtube_context.get("metadata", {})
-        stats = youtube_context.get("stats", {})
-        
-        context_parts.append("\nYou are creating content based on a YouTube video:")
-        if video_info.get("url"):
-            context_parts.append(f"Video URL: {video_info['url']}")
-        if stats.get("word_count"):
-            context_parts.append(f"Transcript length: ~{stats['word_count']} words")
-        
-        transcript = youtube_context.get("transcript", "")
-        if transcript:
-            context_parts.append("\n**VIDEO TRANSCRIPT PROVIDED BELOW:**")
-            
-            if len(transcript) > self.max_transcript_length:
-                transcript_preview = transcript[:self.max_transcript_length] + "..."
-                context_parts.append(f"\n{transcript_preview}")
-                context_parts.append(f"\n[Note: This is a preview of the full {len(transcript)}-character transcript]")
-            else:
-                context_parts.append(f"\n{transcript}")
-        
-        context_parts.append("\n**IMPORTANT**: You have been provided with the actual video transcript above. Please create content that references, summarizes, or analyzes the key points from this video transcript while maintaining SEC/FINRA compliance.")
-        
-        return context_parts
-    
-    def _extract_platform_from_content_type(self, content_type: str) -> str:
-        """Extract platform from content type."""
-        platform_mapping = {
-            'linkedin_post': 'linkedin',
-            'email_template': 'email',
-            'website_content': 'website',
-            'newsletter': 'newsletter',
-            'social_media': 'twitter',
-            'blog_post': 'website'
-        }
-        return platform_mapping.get(content_type.lower(), 'general')

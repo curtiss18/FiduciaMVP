@@ -1,18 +1,12 @@
 ﻿"""
 Tests for Individual Content Generation Strategies
 
-Test Coverage:
-- AdvancedGenerationStrategy implementation
-- StandardGenerationStrategy implementation  
-- LegacyGenerationStrategy implementation
-- Strategy-specific behavior and error handling
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from src.services.warren.strategies import (
     AdvancedGenerationStrategy,
-    StandardGenerationStrategy,
     LegacyGenerationStrategy,
     GenerationResult
 )
@@ -183,76 +177,6 @@ class TestAdvancedGenerationStrategy:
                 assert result.generation_time > 0
 
 
-class TestStandardGenerationStrategy:
-    """Test StandardGenerationStrategy implementation."""
-    
-    @pytest.fixture
-    def strategy(self):
-        """Create StandardGenerationStrategy instance for testing."""
-        return StandardGenerationStrategy()
-    
-    @pytest.fixture  
-    def sample_context_data(self):
-        """Sample context data for testing."""
-        return {
-            "session_id": "test-session-456",
-            "marketing_examples": [
-                {"title": "Example", "content_text": "Content..."}
-            ]
-        }
-    
-    def test_strategy_properties(self, strategy):
-        """Test strategy basic properties."""
-        assert strategy.get_strategy_name() == "standard"
-        assert strategy.get_strategy_priority() == 50
-        assert strategy.requires_advanced_context() is False
-    
-    def test_can_handle_any_context(self, strategy):
-        """Test can_handle - standard strategy handles any context."""
-        contexts = [
-            {"rich": "context"},
-            {"minimal": True},
-            {},
-            {"session_id": "test"}
-        ]
-        
-        for context in contexts:
-            assert strategy.can_handle(context) is True
-    
-    @pytest.mark.asyncio
-    async def test_generate_content_success(self, strategy, sample_context_data):
-        """Test successful content generation."""
-        with patch('src.services.warren.strategies.standard_generation_strategy.BasicContextAssemblyOrchestrator') as mock_assembler_class:
-            with patch('src.services.warren.strategies.standard_generation_strategy.AsyncSessionLocal'):
-                with patch('src.services.warren.strategies.standard_generation_strategy.prompt_service') as mock_prompt:
-                    with patch('src.services.warren.strategies.standard_generation_strategy.claude_service') as mock_claude:
-                        
-                        # Setup mocks
-                        mock_assembler = AsyncMock()
-                        mock_assembler_class.return_value = mock_assembler
-                        mock_assembler.build_warren_context.return_value = {
-                            "context": "Standard assembled context...",
-                            "total_tokens": 1000,
-                            "optimization_applied": False
-                        }
-                        
-                        mock_prompt.get_warren_system_prompt.return_value = "System prompt..."
-                        mock_claude.generate_content = AsyncMock(return_value="Generated content...")
-                        
-                        # Execute
-                        result = await strategy.generate_content(
-                            context_data=sample_context_data,
-                            user_request="Create newsletter",
-                            content_type="newsletter"
-                        )
-                        
-                        # Verify
-                        assert result.success is True
-                        assert result.content == "Generated content..."
-                        assert result.strategy_used == "standard"
-                        assert result.metadata["phase"] == "Phase_1_Standard"
-
-
 class TestLegacyGenerationStrategy:
     """Test LegacyGenerationStrategy implementation."""
     
@@ -295,11 +219,17 @@ class TestLegacyGenerationStrategy:
             {"complex": "context"},
             {},
             {"error": "scenario"},
-            {"session_id": "test"}
+            {"session_id": "test"},
+            # Test additional edge cases for "always works" behavior
+            None,
+            "not a dictionary", 
+            [],
+            {"invalid": {"nested": "structure"}},
+            {"marketing_examples": "not a list"}  # Invalid type that Advanced would reject
         ]
         
         for context in contexts:
-            assert strategy.can_handle(context) is True
+            assert strategy.can_handle(context) is True, f"Legacy strategy should handle any context, failed on: {context}"
     
     @pytest.mark.asyncio
     async def test_generate_content_new_content(self, strategy, sample_context_data):
@@ -456,7 +386,6 @@ class TestStrategiesComparison:
         """Create instances of all strategies."""
         return {
             "advanced": AdvancedGenerationStrategy(),
-            "standard": StandardGenerationStrategy(), 
             "legacy": LegacyGenerationStrategy()
         }
     
@@ -464,9 +393,8 @@ class TestStrategiesComparison:
         """Test that strategy priorities are properly ordered."""
         priorities = {name: strategy.get_strategy_priority() for name, strategy in all_strategies.items()}
         
-        assert priorities["advanced"] < priorities["standard"] < priorities["legacy"]
+        assert priorities["advanced"] < priorities["legacy"]
         assert priorities["advanced"] == 10
-        assert priorities["standard"] == 50
         assert priorities["legacy"] == 100
     
     def test_platform_extraction_consistency(self, all_strategies):
@@ -487,11 +415,25 @@ class TestStrategiesComparison:
         """Test that all strategy names are unique."""
         names = [strategy.get_strategy_name() for strategy in all_strategies.values()]
         assert len(names) == len(set(names))
-        assert set(names) == {"advanced", "standard", "legacy"}
+        assert set(names) == {"advanced", "legacy"}
     
     def test_advanced_context_requirements(self, all_strategies):
         """Test advanced context requirements are set correctly."""
         assert all_strategies["advanced"].requires_advanced_context() is True
-        assert all_strategies["standard"].requires_advanced_context() is False
         assert all_strategies["legacy"].requires_advanced_context() is False
+
+    def test_base_class_inheritance(self, all_strategies):
+        """Test that all strategies inherit from BaseGenerationStrategy."""
+        from src.services.warren.strategies.base_generation_strategy import BaseGenerationStrategy
+        
+        for name, strategy in all_strategies.items():
+            assert isinstance(strategy, BaseGenerationStrategy), f"{name} should inherit from BaseGenerationStrategy"
+            
+    def test_inherited_methods_available(self, all_strategies):
+        """Test that inherited methods from BaseGenerationStrategy are available."""
+        for name, strategy in all_strategies.items():
+            assert hasattr(strategy, '_extract_platform_from_content_type'), f"{name} should have inherited platform extraction"
+            assert hasattr(strategy, '_handle_generation_error'), f"{name} should have inherited error handling"
+            assert hasattr(strategy, '_populate_success_result'), f"{name} should have inherited success result population"
+            assert hasattr(strategy, '_build_base_prompt_context'), f"{name} should have inherited prompt context building"
 

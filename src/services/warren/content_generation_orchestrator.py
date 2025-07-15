@@ -268,14 +268,9 @@ class ContentGenerationOrchestrator:
         has_disclaimers = len(context_data.get("disclaimers", [])) > 0
         
         # Advanced: High quality context with vector search
-        if (vector_available and quality_score > 0.7 and 
-            has_marketing_examples and has_disclaimers):
+        if (vector_available and quality_score > 0.5 and 
+            (has_marketing_examples or has_disclaimers)):
             return self.strategy_factory.get_strategy("advanced")
-        
-        # Standard: Moderate quality context
-        elif (vector_available and quality_score > 0.4 and 
-              (has_marketing_examples or has_disclaimers)):
-            return self.strategy_factory.get_strategy("standard")
         
         # Legacy: Fallback case
         else:
@@ -286,7 +281,7 @@ class ContentGenerationOrchestrator:
     async def _try_fallback_generation(self, request_params: Dict[str, Any], original_error: str) -> Dict[str, Any]:
         """Try fallback generation strategies if primary strategy fails."""
         context_data = request_params["context_data"]
-        fallback_strategies = ["standard", "legacy"]
+        fallback_strategies = ["legacy"]  # Simplified fallback chain
         
         for strategy_name in fallback_strategies:
             try:
