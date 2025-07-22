@@ -26,7 +26,7 @@ FiduciaMVP enables financial advisors to create compliant marketing content in m
    git clone https://github.com/curtiss18/FiduciaMVP.git
    cd FiduciaMVP
    ```
-### Make sure docker desktop is running
+# Make sure docker desktop is running
 
 2. **Run the automated setup**
    ```bash
