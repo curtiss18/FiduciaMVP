@@ -9,8 +9,18 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Parse command line arguments
+SKIP_SEED=false
+if [[ "$1" == "--no-seed" ]]; then
+    SKIP_SEED=true
+fi
+
 echo -e "${GREEN}🚀 FiduciaMVP Development Setup${NC}"
 echo "==============================="
+if [ "$SKIP_SEED" = true ]; then
+    echo -e "${YELLOW}Note: Skipping database seeding (--no-seed flag detected)${NC}"
+fi
+echo ""
 
 # Check if we're in the right directory
 if [ ! -f "requirements.txt" ]; then
@@ -121,6 +131,29 @@ sleep 5
 echo -e "\n${YELLOW}🗄️  Initializing database...${NC}"
 python scripts/init_db.py
 
+# Seed database with sample data (unless --no-seed flag is used)
+if [ "$SKIP_SEED" = false ]; then
+    echo -e "\n${YELLOW}🌱 Seeding database with sample data...${NC}"
+    echo -e "${YELLOW}This will create demo accounts and sample content for testing${NC}"
+    python scripts/init_db_with_seed.py --seed
+
+    # Check if seeding was successful
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✅ Sample data loaded successfully!${NC}"
+        echo ""
+        echo -e "${GREEN}Demo Accounts Created:${NC}"
+        echo -e "  Advisor: ${YELLOW}demo_advisor_001${NC}"
+        echo -e "  CCO Full: ${YELLOW}john.cco@firmcompliance.com${NC}"
+        echo -e "  CCO Lite: ${YELLOW}sarah.compliance@wealthadvisors.com${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Sample data seeding failed, but setup is complete${NC}"
+        echo -e "You can manually seed data later with: ${YELLOW}python scripts/init_db_with_seed.py --seed${NC}"
+    fi
+else
+    echo -e "\n${YELLOW}ℹ️  Skipping sample data seeding${NC}"
+    echo -e "You can seed data later with: ${YELLOW}python scripts/init_db_with_seed.py --seed${NC}"
+fi
+
 echo -e "\n${GREEN}✅ Setup complete!${NC}"
 echo ""
 echo "To start the development server:"
@@ -129,3 +162,9 @@ echo -e "  ${YELLOW}python scripts/run_dev.py${NC}"
 echo ""
 echo "Or use the shortcut:"
 echo -e "  ${YELLOW}./scripts/run_dev.sh${NC}"
+echo ""
+if [ "$SKIP_SEED" = false ]; then
+    echo -e "${GREEN}📊 Sample data has been loaded!${NC}"
+    echo "You can now test the system with pre-populated content and demo accounts."
+    echo "See docs/database/seeding-guide.md for details about the sample data."
+fi

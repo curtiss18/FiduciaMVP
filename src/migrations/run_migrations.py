@@ -18,6 +18,7 @@ import logging
 # Import migration functions using clean file names
 from src.migrations.advisor_content_compliance_fields import migrate_advisor_content_compliance_fields
 from src.migrations.create_compliance_tables import create_compliance_tables
+from src.migrations.seed_data.seed_database import seed_database
 
 # Set up logging
 logging.basicConfig(
@@ -26,7 +27,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-async def run_all_migrations():
+async def run_all_migrations(include_seed_data=False):
     """Run all compliance portal migrations in correct order"""
     
     logger.info("🚀 Starting Compliance Portal Migration Suite")
@@ -43,10 +44,18 @@ async def run_all_migrations():
         await create_compliance_tables()
         logger.info("✅ Step 2 completed successfully!")
         
+        # Optional Step 3: Seed sample data
+        if include_seed_data:
+            logger.info("🌱 Step 3: Seeding database with sample data...")
+            await seed_database()
+            logger.info("✅ Step 3 completed successfully!")
+        
         logger.info("=" * 60)
         logger.info("🎉 ALL MIGRATIONS COMPLETED SUCCESSFULLY!")
         logger.info("📊 Database is now ready for compliance portal development")
-        logger.info("🧪 Sample data available for testing")
+        if include_seed_data:
+            logger.info("🧪 Sample data loaded for testing")
+            logger.info("👤 Demo accounts available - see documentation")
         logger.info("")
         logger.info("📝 ROLLBACK INFORMATION:")
         logger.info("🔄 To rollback migrations: python -m src.migrations.rollback_compliance_migration --confirm-rollback")
@@ -90,5 +99,7 @@ if __name__ == "__main__":
     
     if len(sys.argv) > 1 and sys.argv[1] == "--schema-only":
         asyncio.run(run_migrations_only())
+    elif len(sys.argv) > 1 and sys.argv[1] == "--with-seed":
+        asyncio.run(run_all_migrations(include_seed_data=True))
     else:
-        asyncio.run(run_all_migrations())
+        asyncio.run(run_all_migrations(include_seed_data=False))

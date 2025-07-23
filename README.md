@@ -33,6 +33,14 @@ FiduciaMVP enables financial advisors to create compliant marketing content in m
    chmod +x scripts/setup.sh
    ./scripts/setup.sh
    ```
+   
+   The setup script will:
+   - Install system dependencies
+   - Create Python virtual environment
+   - Install all Python packages
+   - Start Docker services (PostgreSQL, Redis)
+   - Initialize the database
+   - **Load sample data with demo accounts** (use `--no-seed` to skip)
 
 3. **Configure environment variables**
    ```bash
@@ -54,23 +62,69 @@ FiduciaMVP enables financial advisors to create compliant marketing content in m
    - API Documentation: http://localhost:8000/docs
    - Health Check: http://localhost:8000/api/v1/health
 
+6. **Install and start the frontend**
+   - In another terminal, navigate to FiduciaMVP
+   ```bash
+   # navigate to frontend
+   cd frontend-advisor
+   # activate virtual environment
+   source venv/bin/activate
+   # install
+   npm install
+   # run
+   npm run dev
+   ```
+   - repeat these steps for the frontend-admin and frontend-compliance if you want to use those
+
 ## Development Commands
 
 ```bash
 # Start all services
 ./scripts/run_dev.sh
 
-# Initialize/reset database
+# Initialize/reset database (without sample data)
 python scripts/init_db.py
+
+# Initialize database with sample data (recommended for development)
+python scripts/init_db_with_seed.py --seed
 
 # Run tests
 pytest
+
+# Database utilities
+python scripts/verify_seed_data.py    # Check if seed data exists
+python scripts/show_demo_data.py       # Display demo accounts and data
+./scripts/reset_db_with_seed.sh       # Reset DB with fresh sample data
 
 # Run with manual startup
 source venv/bin/activate
 docker-compose up -d
 python scripts/run_dev.py
 ```
+
+## Database Seeding
+
+The project includes a comprehensive database seeding system that populates the database with realistic sample data for development and testing.
+
+### Quick Start with Sample Data
+```bash
+# Initialize database with all sample data (recommended for new developers)
+python scripts/init_db_with_seed.py --seed
+```
+
+### What Gets Seeded
+- **Marketing Content**: Pre-approved compliant content examples
+- **Compliance Rules**: SEC/FINRA regulations and requirements
+- **Demo Accounts**: Test advisor and CCO accounts
+- **Sample Workflows**: Content in various approval states
+- **CRM Data**: Sample contacts and audience groups
+
+### Demo Accounts Created
+- **Advisor**: `demo_advisor_001`
+- **CCO Full**: `john.cco@firmcompliance.com`
+- **CCO Lite**: `sarah.compliance@wealthadvisors.com`
+
+For detailed seeding documentation, see [docs/database/seeding-guide.md](docs/database/seeding-guide.md).
 
 ## Project Structure
 
@@ -111,10 +165,19 @@ docker-compose restart
 
 ### Database Issues
 ```bash
-# Reset database
+# Reset database (without sample data)
 docker-compose down -v
 docker-compose up -d
 python scripts/init_db.py
+
+# Reset database with fresh sample data
+./scripts/reset_db_with_seed.sh
+
+# Or manually seed existing database
+python scripts/init_db_with_seed.py --seed
+
+# Verify seed data
+python scripts/verify_seed_data.py
 ```
 
 ### Python Dependencies
